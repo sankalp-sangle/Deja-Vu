@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block navigationTabs %}
+<li><a href={{ url_for('display') }}>Switches</a></li>
+<li><a href={{ url_for('packetwise')}} >Packet-wise search</a></li>
+<li><a>Triggers</a></li>
+<li><a href={{ url_for('topo') }}>Topology</a></li>
+<li><a href={{ url_for('query') }}>Query</a></li>
+{% endblock navigationTabs %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Home page ...</h1>
+</div>
+{% endblock %}

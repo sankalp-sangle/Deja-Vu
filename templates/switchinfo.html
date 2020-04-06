@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block navigationTabs %}
+<li><a href={{ url_for('display') }}>Go back</a></li>
+{% endblock navigationTabs %}
+
+
+
+
+{% block page_content %}
+    <ul>
+        {% for row in records %}
+            <li>{{row}}</li>
+        {% endfor %}
+    </ul>
+{% endblock page_content %}

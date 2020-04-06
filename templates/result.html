@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block navigationTabs %}
+    <li><a href= {{ url_for('packetwise') }} >Go back</a></li>
+{% endblock navigationTabs %}
+
+{% block page_content %}
+    <h1>Grafana returned: </h1>
+    {{response}}
+{% endblock page_content %}

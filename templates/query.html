@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Querying{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Query details!</h1>
+</div>
+
+{{ wtf.quick_form(form) }}
+
+{% if results %}
+    <ul>
+        {% for result in results %}
+            <li> {{result[2]}} </li>
+        {% endfor %}
+    </ul>
+
+{% endif %}
+{% endblock %}

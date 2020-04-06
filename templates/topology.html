@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    {{super()}}
+    <style>
+        .test {
+            width: 120px;
+            height: 120px;
+            background-color: blueviolet;
+          }
+    </style>
+{% endblock head %}
+
+{% block page_content %}
+<div class="container">
+    <h2>Circle</h2>
+    <p>We have a rectangle below:</p>
+    <div class="test rounded-circle"></div>
+</div>
+<button type="button" class="btn btn-default btn-circle btn-lg"></button>
+{% endblock page_content %}
