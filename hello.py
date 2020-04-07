@@ -5,7 +5,7 @@ from flask_bootstrap import Bootstrap
 from mysql.connector import Error
 
 from lib.core import (Dashboard, Dashboard_Properties, MySQL_Manager, Panel,
-                      QueryBuilder, Target, Time)
+                      QueryBuilder, Target, Time, Grid_Position, Switch, Flow)
 from lib.forms import PacketSearchForm, SampleForm, SimpleButton
 
 from lib.vars import DATABASE, HOST, URL, ANNOTATIONS_URL, DATASOURCE_URL, API_KEY, YEAR_SEC, UNIX_TIME_START_YEAR, headers
@@ -27,7 +27,11 @@ def internal_server_error(e):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    trigger_switch = g.mysql_manager.execute_query("select switch from triggers")[1:][0][0]
+    times = g.mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords")[1:][0]
+    min_time = times[0]
+    max_time = times[1]
+    return render_template('index.html', switch=trigger_switch, duration=(max_time-min_time) / 10**9)
 
 
 @app.route('/user/<name>')
@@ -40,10 +44,43 @@ def display():
     switches = [row[0] for row in result_set[1:]]
     return render_template('switches.html', switches=switches)
 
-@app.route('/displaySwitch/<switch>')
+@app.route('/displaySwitch/<switch>', methods=['GET', 'POST'])
 def displaySwitch(switch):
-    result_set = g.mysql_manager.execute_query("select * from packetrecords where switch='" + switch + "'")
-    return render_template('switchinfo.html', records=result_set[1:])
+    Swich = Switch(switch)
+    Swich.populate_flow_list(g.mysql_manager)
+    Swich.populate_ratios(g.mysql_manager)
+    # print(Swich.flowList)
+
+    
+    
+    return render_template('switchinfo.html', switch=Swich)
+
+    
+
+@app.route('/switchPush/<switch>')
+def switchPush(switch):
+    panelList = []
+
+    panelList.append(Panel(gridPos=Grid_Position(x=0,y=0), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=QueryBuilder(time_column = "time_stamp", value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
+    panelList.append(Panel(gridPos=Grid_Position(x=12,y=11),title="Default Panel: Link Utilization", targets = [Target(rawSql=QueryBuilder(value = 'link_utilization', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
+    panelList.append(Panel(gridPos=Grid_Position(x=0,y=11),title="Default Panel: Queue Depth", targets = [Target(rawSql=QueryBuilder(value = 'queue_depth', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
+    panelList.append(Panel(gridPos=Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Target(rawSql=QueryBuilder(value = 'source_ip % 10', metricList = ['source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE, points = True, lines = False))    
+
+    time_from_seconds = g.mysql_manager.execute_query('select min(time_in) from packetrecords where switch = ' + switch)[1][0]
+    time_to_seconds = g.mysql_manager.execute_query('select max(time_out) from packetrecords where switch = ' + switch)[1][0]
+
+    year_from = UNIX_TIME_START_YEAR + (time_from_seconds // YEAR_SEC)
+    year_to = UNIX_TIME_START_YEAR + 1 + (time_to_seconds // YEAR_SEC)
+    
+    time_from = get_formatted_time(year_from)
+    time_to = get_formatted_time(year_to)
+
+    dashboard = Dashboard(properties=Dashboard_Properties(title="Switch " + switch ,time=Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
+    
+    payload = get_final_payload(dashboard)
+    # print("\nPayload:\n" + payload)
+    response = requests.request("POST", url=URL, headers=headers, data = payload)
+    return render_template('switchPush.html', response=str(response.json()))
 
 @app.route('/topo')
 def topo():
@@ -96,6 +133,14 @@ def packetwise():
         response = requests.request("POST", url=URL, headers=headers, data = payload)
         return render_template('result.html', response=str(response.json()))
     return render_template('packetwise.html', form=form, form2=form2, results=results)
+
+@app.route('/flow/<flow>')
+def flow(flow):
+    Flowe = Flow(identifier=flow)
+    Flowe.populate_switch_list(g.mysql_manager)
+    Flowe.populate_ratios(g.mysql_manager)
+
+    return render_template('flowinfo.html', flo = Flowe)
 
 @app.before_request
 def before_request():

@@ -1,16 +1,28 @@
 {% extends 'base.html' %}
 
+{% block title %}
+Switch {{switch.identifier}}
+{% endblock title %}
+
 {% block navigationTabs %}
-<li><a href={{ url_for('display') }}>Go back</a></li>
+    <li><a href={{ url_for('display') }}>Go back</a></li>
 {% endblock navigationTabs %}
 
-
-
-
 {% block page_content %}
+<div class="page-header">
+    <h1> {{switch.identifier}} </h1>
+</div>
+
+<h5>
+    Flows:
     <ul>
-        {% for row in records %}
-            <li>{{row}}</li>
+        {% for flow in switch.flowList %}
+            <li> <a href={{ url_for('flow', flow=flow)}}>{{flow}}</a>, Ratio : {{switch.ratios[flow]}}</li>
         {% endfor %}
     </ul>
+</h5>
+
+<h1><a href= {{ url_for('switchPush', switch=switch.identifier) }}>Plot default dashboards in Grafana</a></h1>
+
+
 {% endblock page_content %}
