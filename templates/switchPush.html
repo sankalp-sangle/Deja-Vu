@@ -7,4 +7,9 @@
 {% block page_content %}
     <h1>Grafana returned: </h1>
     {{response}}
+    <br>
+    {% if dashboardID %}
+    <iframe src="http://localhost:3000/d/{{dashboardID}}" width = "1152" height = "720"></iframe>
+    {% endif %}
+    
 {% endblock page_content %}

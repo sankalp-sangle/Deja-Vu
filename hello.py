@@ -81,7 +81,8 @@ def switchPush(switch):
     payload = get_final_payload(dashboard)
     # print("\nPayload:\n" + payload)
     response = requests.request("POST", url=URL, headers=headers, data = payload)
-    return render_template('switchPush.html', response=str(response.json()))
+    dashboardId = response.json()['uid']
+    return render_template('switchPush.html', response=str(response.json()), dashboardID=dashboardId)
 
 @app.route('/topo')
 def topo():
@@ -142,6 +143,10 @@ def flow(flow):
     Flowe.populate_ratios(g.mysql_manager)
 
     return render_template('flowinfo.html', flo = Flowe)
+
+@app.route('/grafana')
+def grafana():
+    return render_template('grafana.html')
 
 @app.before_request
 def before_request():
