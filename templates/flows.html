@@ -4,7 +4,9 @@
 <div class="row">
     {% for switch in switches %}
 
-    <h3>Switch {{switches[switch].identifier}}</h3>
+    <h3>Switch {{switches[switch].identifier}} {% if switches[switch].identifier == trigger_switch %}
+    <b>(Trigger)</b>
+    {% endif %}</h3>
         Here are the flows:
         <ul>
             {% for flow in switches[switch].flowList  %}

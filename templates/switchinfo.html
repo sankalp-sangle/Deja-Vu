@@ -12,7 +12,9 @@ Switch {{switch.identifier}}
 
 {% block page_content %}
 <div class="page-header">
-    <h1> {{switch.identifier}} </h1>
+    <h1> Switch {{switch.identifier}} {% if level %} | Type: Level {{level}}
+    {% endif %} 
+    </h1>
 </div>
 
 <h5>

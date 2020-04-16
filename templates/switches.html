@@ -2,23 +2,17 @@
 
 {% block page_content %}
 <div class="row">
-    <div class="col-sm-6">
-        <h2>Top of Rack Switches</h2>
+    {% for level in lvlToSwitch %}
+    <div class="col-sm-{{ 12 // lvlToSwitch|length }}">
+        <h2>Level {{level}} Switches </h2>
         <ul>
-            {% for switch in tor_switches %}
-            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}}</a></li>
+            {% for switch in lvlToSwitch[level] %}
+            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}} {% if trigger_switch == switch %} <b style="color:rgb(255, 42, 42);">(Trigger)</b>{% endif %}</a>
+            </li>
             
             {% endfor %}
         </ul>
     </div>
-    <div class="col-sm-6">
-        <h2>Other Switches</h2>
-        <ul>
-            {% for switch in other_switches %}
-            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}}</a></li>
-            
-            {% endfor %}
-        </ul>
-    </div>
-  </div>
+  {% endfor %}
+</div>
 {% endblock page_content %}

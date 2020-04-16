@@ -3,11 +3,13 @@ import requests
 from flask import Flask, g, redirect, render_template, session, url_for, request
 from flask_bootstrap import Bootstrap
 from mysql.connector import Error
+import os
 
 from lib.core import (Dashboard, Dashboard_Properties, MySQL_Manager, Panel,
                       QueryBuilder, Target, Time, Grid_Position, Switch, Flow)
 from lib.forms import PacketSearchForm, SampleForm, SimpleButton
 
+from collections import deque
 from lib.vars import DATABASE, HOST, URL, ANNOTATIONS_URL, DATASOURCE_URL, API_KEY, YEAR_SEC, UNIX_TIME_START_YEAR, headers
 
 app = Flask(__name__)
@@ -17,6 +19,9 @@ bootstrap = Bootstrap(app)
 
 switchArr = {}
 flowArr = {}
+G = {}
+levels = {}
+
 mysql_manager = MySQL_Manager(database=DATABASE)
 trigger_switch = mysql_manager.execute_query("select switch from triggers")[1:][0][0]
 times = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords")[1:][0]
@@ -27,7 +32,6 @@ all_switches = set( [x[0] for x in mysql_manager.execute_query("select distinct 
 all_flows = set( [x[0] for x in mysql_manager.execute_query("select distinct source_ip from packetrecords")[1:] ] )
 
 for flow in all_flows:
-    print(flow)
     flowArr[flow] = Flow(identifier=flow)
     flowArr[flow].populate_switch_list(mysql_manager)
     flowArr[flow].populate_ratios(mysql_manager)
@@ -36,6 +40,8 @@ for switch in all_switches:
     switchArr[switch] = Switch(switch)
     switchArr[switch].populate_flow_list(mysql_manager)
     switchArr[switch].populate_ratios(mysql_manager)
+
+
 
 #Global declarations
 
@@ -55,8 +61,15 @@ def index():
 
 @app.route('/switches')
 def switches():
+    lvlToSwitch = {}
+    for key in levels:
+        if levels[key] in lvlToSwitch:
+            lvlToSwitch[levels[key]].append(key)
+        else:
+            lvlToSwitch[levels[key]] = [key]
+
     other_switches = all_switches - tor_switches
-    return render_template('switches.html', tor_switches=sorted(list(tor_switches)), other_switches=sorted(list(other_switches)) )
+    return render_template('switches.html', lvlToSwitch = lvlToSwitch, tor_switches=sorted(list(tor_switches)), other_switches=sorted(list(other_switches)) , trigger_switch = trigger_switch)
 
 @app.route('/switches/<switch>', methods=['GET', 'POST'])
 def displaySwitch(switch):
@@ -64,7 +77,7 @@ def displaySwitch(switch):
     # print(Swich.flowList)
 
     if request.method == "GET":
-        return render_template('switchinfo.html', switch=switchArr[switch], form=form)
+        return render_template('switchinfo.html', switch=switchArr[switch], form=form, level = levels[switch])
     elif request.method == "POST":
         if form.validate_on_submit():
             panelList = []
@@ -91,7 +104,7 @@ def displaySwitch(switch):
             # print("\nPayload:\n" + payload)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
             dashboardId = response.json()['uid']
-            return render_template('switchinfo.html', switch=switchArr[switch], form = form, dashboardID=dashboardId)
+            return render_template('switchinfo.html', switch=switchArr[switch], form = form, dashboardID=dashboardId, level = levels[switch])
 
 @app.route('/topo')
 def topo():
@@ -161,11 +174,17 @@ def packetwise():
 @app.route('/flows/<flow>')
 def displayFlow(flow):
     # print(flow)
-    return render_template('flowinfo.html', flo = flowArr[int(flow)])
+    lvlToSwitch = {}
+    for switch in flowArr[int(flow)].switchList:
+        if levels[switch] in lvlToSwitch:
+            lvlToSwitch[levels[switch]].append(switch)
+        else:
+            lvlToSwitch[levels[switch]] = [switch]
+    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch)
 
 @app.route('/flows')
 def flows():
-    return render_template('flows.html', flows = flowArr, switches = switchArr)
+    return render_template('flows.html', flows = flowArr, switches = switchArr, trigger_switch=trigger_switch)
 
 @app.route('/grafana')
 def grafana():
@@ -197,5 +216,41 @@ def get_final_payload(dashboard):
 def get_formatted_time(year):
     return "{}-{}-{}".format(year, "01", "01")
 
+def generateGraph():
+    links = mysql_manager.execute_query("select * from links")[1:]
+    for link in links:
+        u, v, cap = link[0], link[1], link[2]
+        if u in G:
+            G[u].append([v, cap])
+        else:
+            G[u] = []
+            G[u].append([v, cap])
+
+def getLevels():
+    for tor in tor_switches:
+        visited = []
+        bfs(visited, deque([[tor, 1]]))
+        # print(levels)
+        
+def bfs(visited, queue):
+    if len(queue) == 0:
+        return
+    
+    node = queue.popleft()
+    if node[0] in levels:
+        levels[node[0]] = min(levels[node[0]], node[1])
+    else:
+        levels[node[0]] = node[1]
+    for adj in G[node[0]]:
+        if adj[0] not in visited:
+            visited.append(adj[0])
+            queue.append([adj[0], node[1] + 1])
+    
+    bfs(visited, queue)
+
 if __name__ == "__main__":
+
+    generateGraph()
+    getLevels()
+    os.system('say "READY"')
     app.run(debug=True)
