@@ -33,7 +33,12 @@
   </table>
 
   {{ wtf.quick_form(form2) }}
-{% endif %}
+  {% endif %}
+
+  {% if dashboardId %}
+  <iframe src="http://localhost:3000/d/{{dashboardId}}" width = "1152" height = "720"></iframe>
+  {% endif %}
+
 
 
 {% endblock page_content %}

@@ -11,4 +11,4 @@ class PacketSearchForm(FlaskForm):
     submit = SubmitField('View details')
 
 class SimpleButton(FlaskForm):
-    submit = SubmitField('Plot in Grafana', validators=[DataRequired()])
+    submit = SubmitField('Plot in Grafana')

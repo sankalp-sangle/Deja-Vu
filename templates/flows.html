@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block page_content %}
+<div class="row">
+    {% for switch in switches %}
+
+    <h3>Switch {{switches[switch].identifier}}</h3>
+        Here are the flows:
+        <ul>
+            {% for flow in switches[switch].flowList  %}
+                <li><a href={{url_for('displayFlow', flow=flow)}}>{{flow}}</a></li>
+            {% endfor %}
+        </ul>
+        
+    {% endfor %}
+</div>
+{% endblock page_content %}

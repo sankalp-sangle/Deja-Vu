@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block navigationTabs %}
-<li><a href={{ url_for('display') }}>Switches</a></li>
+<li><a href={{ url_for('switches') }}>Switches</a></li>
+<li><a href = {{ url_for('flows') }}>Flows</a></li>
 <li><a href={{ url_for('packetwise')}} >Packet-wise search</a></li>
 <li><a>Triggers</a></li>
 <li><a href={{ url_for('topo') }}>Topology</a></li>

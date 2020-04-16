@@ -1,8 +1,24 @@
 {% extends 'base.html' %}
 
-{% block navigationTabs %}
-    {% for switch in switches %}
-        <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}}</a></li>
-    {% endfor %}
-    
-{% endblock navigationTabs %}
+{% block page_content %}
+<div class="row">
+    <div class="col-sm-6">
+        <h2>Top of Rack Switches</h2>
+        <ul>
+            {% for switch in tor_switches %}
+            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}}</a></li>
+            
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-sm-6">
+        <h2>Other Switches</h2>
+        <ul>
+            {% for switch in other_switches %}
+            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}}</a></li>
+            
+            {% endfor %}
+        </ul>
+    </div>
+  </div>
+{% endblock page_content %}
