@@ -3,7 +3,7 @@ import requests
 from flask import Flask, g, redirect, render_template, session, url_for, request
 from flask_bootstrap import Bootstrap
 from mysql.connector import Error
-import os
+import os, json
 
 from lib.core import (Dashboard, Dashboard_Properties, MySQL_Manager, Panel,
                       QueryBuilder, Target, Time, Grid_Position, Switch, Flow)
@@ -21,6 +21,9 @@ switchArr = {}
 flowArr = {}
 G = {}
 levels = {}
+
+nodelist = []
+linklist = []
 
 mysql_manager = MySQL_Manager(database=DATABASE)
 trigger_switch = mysql_manager.execute_query("select switch from triggers")[1:][0][0]
@@ -105,12 +108,6 @@ def displaySwitch(switch):
             response = requests.request("POST", url=URL, headers=headers, data = payload)
             dashboardId = response.json()['uid']
             return render_template('switchinfo.html', switch=switchArr[switch], form = form, dashboardID=dashboardId, level = levels[switch])
-
-@app.route('/topo')
-def topo():
-    result_set = g.mysql_manager.execute_query("select * from links")
-    print(result_set)
-    return render_template('topology.html')
 
 @app.route('/query', methods=['GET', 'POST'])
 def query():
@@ -248,9 +245,34 @@ def bfs(visited, queue):
     
     bfs(visited, queue)
 
+@app.route('/topo')
+def topo():
+    return render_template("topology.html", nodelist = nodelist, linklist = linklist, trigger_switch = trigger_switch)
+
+def printJson():
+    
+    for node in G:
+        nodeEntry = {}
+        nodeEntry["id"] = node
+        nodeEntry["group"] = "switch"
+        nodeEntry["label"] = node
+        nodeEntry["level"] = levels[node]
+        nodelist.append(nodeEntry)
+    
+    links = mysql_manager.execute_query("select * from links")[1:]
+
+    for link in links:
+        linkEntry = {}
+        linkEntry["source"] = link[0]
+        linkEntry["target"] = link[1]
+        linkEntry["strength"] = 0.7
+        linklist.append(linkEntry)
+
 if __name__ == "__main__":
 
     generateGraph()
     getLevels()
+
+    printJson()
     os.system('say "READY"')
     app.run(debug=True)
