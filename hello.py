@@ -177,7 +177,7 @@ def displayFlow(flow):
             lvlToSwitch[levels[switch]].append(switch)
         else:
             lvlToSwitch[levels[switch]] = [switch]
-    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch)
+    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist)
 
 @app.route('/flows')
 def flows():
