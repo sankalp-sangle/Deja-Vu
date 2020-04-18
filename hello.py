@@ -177,7 +177,18 @@ def displayFlow(flow):
             lvlToSwitch[levels[switch]].append(switch)
         else:
             lvlToSwitch[levels[switch]] = [switch]
-    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist)
+    res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ flow + "\' group by switch")[1:]
+    time_in_list = [int(row[1]) for row in res]
+    minLim = str(min(time_in_list))
+    maxLim = str(max(time_in_list))
+    minLim2 = {"val":min(time_in_list) }
+    maxLim2 = {"val":max(time_in_list) }
+    times={}
+    for row in res:
+        times[row[0]] = int(row[1])
+
+    print("Times" + str(times))
+    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.route('/flows')
 def flows():

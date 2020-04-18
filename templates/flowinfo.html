@@ -9,6 +9,12 @@ Flow {{flo.identifier}}
 {% endblock navigationTabs %}
 
 {% block page_content %}
+
+
+
+  <div class="row">
+      <h2>Flow {{flo.identifier}}</h2>
+  </div>
 <div class="row">
     {% for level in lvlToSwitch | sort%}
     <div class="col-sm-{{ 12 // lvlToSwitch|length }}">
@@ -24,12 +30,24 @@ Flow {{flo.identifier}}
   {% endfor %}
 </div>
 
+<div class="row">
+    <!-- <div class="d-flex justify-content-center my-4"> -->
+        <!-- <form class="range-field w-75"> -->
+          <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
+        <!-- </form> -->
+        <span style="color:rgb(255, 0, 0);font-weight:bold" class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
+    <!-- </div> -->
+</div>
+
 <style>
     .box{
         width:25px;
         height:25px;
     }
-     
+    .blue{
+        background:blue
+    }
+
     .red{
         background:#f00;
     }
@@ -45,24 +63,63 @@ Flow {{flo.identifier}}
     </style>
 
 <div class="row">
-    <h2>Legend</h2>
-<div class = "col-sm-6">
-    Visited <div class="box red"></div>
+    <div style="text-align:center;">
+        <h2>Legend</h2>
+        <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
+
+        <p style="color:rgb(144,144,168);font-weight:bold">Not visited</p>
+    </div>
 </div>
-<div class = "col-sm-6">
-    Not visited <div class="box gray"></div>
 </div>
-</div>
-<div class="row">
+<div class="row" style="text-align:center;">
 <svg width="960" height="400" style="border:1px solid black"></svg>
+</div>
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
+
+$(document).ready(function() {
+
+const $valueSpan = $('.valueSpan');
+const $value = $('#slider11');
+
+$value.on('input change', () => {
+
+  var x = $value.val()  
+  $valueSpan.html("Time: " + $value.val() + " nanos");
+  d3.selectAll("circle")
+  .attr("fill", getNodeColor)
+});
+});
+
 var nodes = {{nodelist|tojson|safe}}
 
 var links = {{linklist|tojson|safe}}
 
 var switches = {{flo.switchList|tojson|safe}}
+
+var times = {{times|tojson|safe}}
+
+var minTime = {{minLim2|tojson|safe}}
+
+var maxTime = {{maxLim2|tojson|safe}}
+
+var interval = maxTime.val - minTime.val
+var factor = interval / 15000
+var timer = d3.timer(function(duration) {
+    // console.log(minTime)
+    document.getElementById("slider11").value = duration * factor + minTime.val
+    const $valueSpan = $('.valueSpan');
+    const $value = $('#slider11');
+    $valueSpan.html("Time: " + $value.val() + " nanos");
+    // console.log(duration);
+    d3.selectAll("circle")
+    .attr("fill", getNodeColor)
+    if (duration * factor + minTime.val >= maxTime.val) timer.stop();
+
+});
+
 
 function getNeighbors(node) {
   return links.reduce(function (neighbors, link) {
@@ -86,8 +143,10 @@ function getNodeColor(node, neighbors) {
   if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
     return node.level === 1 ? 'blue' : 'green'
   }
-  if ( switches.includes(node.label) ) {
-          return 'red'
+  const $value = $('#slider11');
+  var time = $value.val()
+  if ( time >= times[node.label] ) {
+          return 'yellow'
       }
   return 'gray'
 }
