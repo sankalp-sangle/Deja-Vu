@@ -179,10 +179,13 @@ def displayFlow(flow):
             lvlToSwitch[levels[switch]] = [switch]
     res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ flow + "\' group by switch")[1:]
     time_in_list = [int(row[1]) for row in res]
-    minLim = str(min(time_in_list))
-    maxLim = str(max(time_in_list))
-    minLim2 = {"val":min(time_in_list) }
-    maxLim2 = {"val":max(time_in_list) }
+
+    interval = max(time_in_list) - min(time_in_list)
+
+    minLim = str(min(time_in_list) - 0.25 * interval)
+    maxLim = str(max(time_in_list) + 0.25 * interval)
+    minLim2 = {"val":min(time_in_list) - 0.25 * interval }
+    maxLim2 = {"val":max(time_in_list) + 0.25 * interval}
     times={}
     for row in res:
         times[row[0]] = int(row[1])

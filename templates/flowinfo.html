@@ -148,6 +148,21 @@ function getNodeColor(node, neighbors) {
   if ( time >= times[node.label] ) {
           return 'yellow'
       }
+  else if( time >= times[node.label] - interval * 0.01) {
+      return 'yellow'
+  }
+  else if( time >= times[node.label] - interval * 0.02) {
+      return 'gray'
+  }
+  else if( time >= times[node.label] - interval * 0.03) {
+      return 'red'
+  }
+  else if( time >= times[node.label] - interval * 0.04) {
+      return 'gray'
+  }
+  else if( time >= times[node.label] - interval * 0.05) {
+      return 'red'
+  }
   return 'gray'
 }
 
