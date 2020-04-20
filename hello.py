@@ -171,6 +171,8 @@ def packetwise():
 @app.route('/flows/<flow>')
 def displayFlow(flow):
     # print(flow)
+    res = g.mysql_manager.execute_query("select distinct source_ip from packetrecords")[1:]
+    choices = [row[0] for row in res]
     lvlToSwitch = {}
     for switch in flowArr[int(flow)].switchList:
         if levels[switch] in lvlToSwitch:
@@ -178,20 +180,24 @@ def displayFlow(flow):
         else:
             lvlToSwitch[levels[switch]] = [switch]
     res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ flow + "\' group by switch")[1:]
+    res2 = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip = 167772162 group by switch")[1:]
     time_in_list = [int(row[1]) for row in res]
+    time_in_list2 = [int(row[1]) for row in res2]
 
-    interval = max(time_in_list) - min(time_in_list)
+    interval = max(max(time_in_list), max(time_in_list2)) - min(min(time_in_list), min(time_in_list2))
 
-    minLim = str(min(time_in_list) - 0.25 * interval)
-    maxLim = str(max(time_in_list) + 0.25 * interval)
-    minLim2 = {"val":min(time_in_list) - 0.25 * interval }
-    maxLim2 = {"val":max(time_in_list) + 0.25 * interval}
+    minLim = str(min(min(time_in_list), min(time_in_list2)) - 0.25 * interval)
+    maxLim = str(max(max(time_in_list), max(time_in_list2)) + 0.25 * interval)
+    minLim2 = {"val":min(min(time_in_list), min(time_in_list2)) - 0.25 * interval }
+    maxLim2 = {"val":max(max(time_in_list), max(time_in_list2)) + 0.25 * interval}
     times={}
     for row in res:
         times[row[0]] = int(row[1])
-
-    print("Times" + str(times))
-    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    times2={}
+    for row in res2:
+        times2[row[0]] = int(row[1])
+    # print("Times" + str(times))
+    return render_template('flowinfo.html', flo = flowArr[int(flow)], flo2=flowArr[167772162], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, times2 = times2, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
 
 @app.route('/flows')
 def flows():
@@ -200,6 +206,37 @@ def flows():
 @app.route('/grafana')
 def grafana():
     return render_template('grafana.html')
+
+@app.route('/allflows', methods=["POST"])
+def allflows():
+    requestedFlows = []
+    for key in request.form:
+        requestedFlows.append(int(key))
+
+    times=[]
+
+    smallestTime = 2**40
+    largestTime = 0
+
+    for flow in requestedFlows:
+        res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ str(flowArr[flow].identifier) + "\' group by switch")[1:]
+        timmes = {}
+        for row in res:
+            timmes[row[0]] = int(row[1])
+
+        smallestTime = min(smallestTime, min([int(row[1]) for row in res]))
+        largestTime = max(largestTime, max([int(row[1]) for row in res]))
+        
+        times.append(timmes)
+
+    interval = largestTime - smallestTime
+    minLim = str( max(smallestTime - 0.1 * interval, 0) )
+    maxLim = str(largestTime + 0.1 * interval)
+    minLim2 = {"val":max(smallestTime - 0.1 * interval, 0)}
+    maxLim2 = {"val":largestTime + 0.1 * interval}
+
+
+    return render_template('allflows.html', flowIPS=requestedFlows, noOfFlows=len(requestedFlows), noOfFlowsJS = {"val":len(requestedFlows)}, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.before_request
 def before_request():

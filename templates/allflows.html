@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-Flow {{flo.identifier}}
+Flow 
 {% endblock title %}
 
 {% block navigationTabs %}
@@ -10,52 +10,14 @@ Flow {{flo.identifier}}
 
 {% block page_content %}
 
-
-
-  <div class="row">
-      <h2>Flow {{flo.identifier}}</h2>
-  </div>
 <div class="row">
-    {% for level in lvlToSwitch | sort%}
-    <div class="col-sm-{{ 12 // lvlToSwitch|length }}">
-        <h2>Level {{level}} Switches visited </h2>
-        <ul>
-            {% for switch in lvlToSwitch[level] %}
-            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}} {% if trigger_switch == switch %} <b style="color:rgb(255, 42, 42);">(Trigger)</b>{% endif %}</a>
-            </li>
-            
-            {% endfor %}
-        </ul>
-    </div>
-  {% endfor %}
-</div>
-
-<div class="row">
+    
     <!-- <div class="d-flex justify-content-center my-4"> -->
         <!-- <form class="range-field w-75"> -->
           <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
         <!-- </form> -->
         <span style="color:rgb(255, 0, 0);font-weight:bold" class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
     <!-- </div> -->
-</div>
-<div class = "row">
-  <div class="col-sm-3">
-    <div style="text-align:center;">
-  <form action = "{{url_for('allflows')}}" method="POST">
-    <h2>Detected Flows</h2>
-    {% for choice in choices %}
-    <input type="checkbox" id="{{choice}}" name="{{choice}}" value="{{choice}}">
-    <label for="vehicle1"> {{choice}} </label><br>
-    {% endfor %}
-    <input type="submit" value="Compare Time Diagrams">
-  </form>
-</div>
-</div>
-<div class="col-sm-3">
-    <h2>Legend</h2>
-    <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
-
-    <p style="color:rgb(144,144,168);font-weight:bold">Not visited</p>
 </div>
 
 <style>
@@ -80,14 +42,25 @@ Flow {{flo.identifier}}
         background:#000;
     }
     </style>
-<div class="col-sm-6">
 
-<svg width="960" height="400" style="border:1px solid black">
-  <text x="0" y="15" fill="red" font-weight="bold">IP: {{flo.identifier}}</text>
-</svg>
+<div class="row">
+    <div style="text-align:center;">
+        <h2>Legend</h2>
+        <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
 
+        <p style="color:rgb(144,144,168);font-weight:bold">Not visited</p>
+    </div>
 </div>
 </div>
+<div class="row" style="text-align:center;">
+
+    {% for i in range(noOfFlows) %}
+        <svg width="960" height="400" style="border:1px solid black" id="svg{{i}}">
+          <text x="0" y="15" fill="red" font-weight="bold">IP: {{flowIPS[i]}}</text>
+        </svg>
+    {% endfor %}
+</div>
+
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
@@ -101,8 +74,10 @@ $value.on('input change', () => {
 
   var x = $value.val()  
   $valueSpan.html("Time: " + $value.val() + " nanos");
-  d3.selectAll("circle")
-  .attr("fill", getNodeColor)
+  var i;
+    for (i = 0; i < noOfFlowsjs.val; i++) {
+        updateNodes(times[i], "svg" + i)
+    }
 });
 });
 
@@ -110,7 +85,7 @@ var nodes = {{nodelist|tojson|safe}}
 
 var links = {{linklist|tojson|safe}}
 
-var switches = {{flo.switchList|tojson|safe}}
+
 
 var times = {{times|tojson|safe}}
 
@@ -118,8 +93,12 @@ var minTime = {{minLim2|tojson|safe}}
 
 var maxTime = {{maxLim2|tojson|safe}}
 
+var noOfFlowsjs = {{noOfFlowsJS|tojson|safe}}
+
+console.log("Flows " + noOfFlowsjs.val);
+
 var interval = maxTime.val - minTime.val
-var factor = interval / 15000
+var factor = interval / 45000
 var timer = d3.timer(function(duration) {
     // console.log(minTime)
     document.getElementById("slider11").value = duration * factor + minTime.val
@@ -127,12 +106,49 @@ var timer = d3.timer(function(duration) {
     const $value = $('#slider11');
     $valueSpan.html("Time: " + $value.val() + " nanos");
     // console.log(duration);
-    d3.selectAll("circle")
-    .attr("fill", getNodeColor)
+    // d3.select("#svg1").selectAll('circle')
+    // .attr("fill", getNodeColor)
+    // d3.select("#svg2").selectAll('circle')
+    // .attr("fill", getNodeColor2)
+    var i;
+    for (i = 0; i < noOfFlowsjs.val; i++) {
+        updateNodes(times[i], "svg" + i)
+    }
+    
     if (duration * factor + minTime.val >= maxTime.val) timer.stop();
 
 });
 
+function updateNodes(timerArr, id) {
+  d3.select("#" + id).selectAll('circle')
+  .attr('fill', function (node) { return getmyfunc(node, timerArr) })
+}
+
+function getmyfunc(node, timerArr) {
+
+  const $value = $('#slider11');
+  var time = $value.val()
+  if ( time >= timerArr[node.label] ) {
+          return 'yellow'
+      }
+  else if( time >= timerArr[node.label] - interval * 0.01) {
+      return 'yellow'
+  }
+  else if( time >= timerArr[node.label] - interval * 0.02) {
+      return 'gray'
+  }
+  else if( time >= timerArr[node.label] - interval * 0.03) {
+      return 'red'
+  }
+  else if( time >= timerArr[node.label] - interval * 0.04) {
+      return 'gray'
+  }
+  else if( time >= timerArr[node.label] - interval * 0.05) {
+      return 'red'
+  }
+  return 'gray'
+
+}
 
 function getNeighbors(node) {
   return links.reduce(function (neighbors, link) {
@@ -179,6 +195,33 @@ function getNodeColor(node, neighbors) {
   return 'gray'
 }
 
+function getNodeColor2(node, neighbors) {
+  if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
+    return node.level === 1 ? 'blue' : 'green'
+  }
+  const $value = $('#slider11');
+  var time = $value.val()
+  if ( time >= times2[node.label] ) {
+          return 'yellow'
+      }
+  else if( time >= times2[node.label] - interval * 0.01) {
+      return 'yellow'
+  }
+  else if( time >= times2[node.label] - interval * 0.02) {
+      return 'gray'
+  }
+  else if( time >= times2[node.label] - interval * 0.03) {
+      return 'red'
+  }
+  else if( time >= times2[node.label] - interval * 0.04) {
+      return 'gray'
+  }
+  else if( time >= times2[node.label] - interval * 0.05) {
+      return 'red'
+  }
+  return 'gray'
+}
+
 
 function getLinkColor(node, link) {
   return isNeighborLink(node, link) ? 'green' : '#E5E5E5'
@@ -191,7 +234,7 @@ function getTextColor(node, neighbors) {
 var width = 600
 var height = 400
 
-var svg = d3.select('svg')
+var svg = d3.selectAll('svg')
 svg.attr('width', width).attr('height', height)
 
 // simulation setup with all forces
