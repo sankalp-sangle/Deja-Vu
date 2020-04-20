@@ -180,24 +180,19 @@ def displayFlow(flow):
         else:
             lvlToSwitch[levels[switch]] = [switch]
     res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ flow + "\' group by switch")[1:]
-    res2 = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip = 167772162 group by switch")[1:]
     time_in_list = [int(row[1]) for row in res]
-    time_in_list2 = [int(row[1]) for row in res2]
 
-    interval = max(max(time_in_list), max(time_in_list2)) - min(min(time_in_list), min(time_in_list2))
+    interval = max(time_in_list) - min(time_in_list)
 
-    minLim = str(min(min(time_in_list), min(time_in_list2)) - 0.25 * interval)
-    maxLim = str(max(max(time_in_list), max(time_in_list2)) + 0.25 * interval)
-    minLim2 = {"val":min(min(time_in_list), min(time_in_list2)) - 0.25 * interval }
-    maxLim2 = {"val":max(max(time_in_list), max(time_in_list2)) + 0.25 * interval}
+    minLim = str(min(time_in_list) - 0.25 * interval)
+    maxLim = str(max(time_in_list) + 0.25 * interval)
+    minLim2 = {"val":min(time_in_list) - 0.25 * interval }
+    maxLim2 = {"val":max(time_in_list) + 0.25 * interval }
     times={}
     for row in res:
         times[row[0]] = int(row[1])
-    times2={}
-    for row in res2:
-        times2[row[0]] = int(row[1])
     # print("Times" + str(times))
-    return render_template('flowinfo.html', flo = flowArr[int(flow)], flo2=flowArr[167772162], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, times2 = times2, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
+    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
 
 @app.route('/flows')
 def flows():
