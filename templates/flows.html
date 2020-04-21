@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
 {% block page_content %}
-<div class="row">
-    {% for switch in switches %}
 
+    {% for switch in switches %}
+    <div class="row">
     <h3>Switch {{switches[switch].identifier}} {% if switches[switch].identifier == trigger_switch %}
     <b>(Trigger)</b>
     {% endif %}</h3>
@@ -13,7 +13,7 @@
                 <li><a href={{url_for('displayFlow', flow=flow)}}>{{flow}}</a></li>
             {% endfor %}
         </ul>
-        
+    </div>
     {% endfor %}
-</div>
+
 {% endblock page_content %}

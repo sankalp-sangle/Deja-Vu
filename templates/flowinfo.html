@@ -11,7 +11,6 @@ Flow {{flo.identifier}}
 {% block page_content %}
 
 
-
   <div class="row">
       <h2>Flow {{flo.identifier}}</h2>
   </div>
@@ -51,8 +50,8 @@ Flow {{flo.identifier}}
   </form>
 </div>
 </div>
-<div class="col-sm-3">
-    <h2>Legend</h2>
+<div class="col-sm-3 legend">
+    <h2 style="color:white">Legend</h2>
     <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
 
     <p style="color:rgb(144,144,168);font-weight:bold">Not visited</p>
@@ -82,8 +81,8 @@ Flow {{flo.identifier}}
     </style>
 <div class="col-sm-6">
 
-<svg width="960" height="400" style="border:1px solid black">
-  <text x="0" y="15" fill="red" font-weight="bold">IP: {{flo.identifier}}</text>
+<svg width="960" height="400">
+  <text x="300" y="15" fill="orange" font-weight="bold">IP: {{flo.identifier}}</text>
 </svg>
 
 </div>
@@ -129,6 +128,9 @@ var timer = d3.timer(function(duration) {
     // console.log(duration);
     d3.selectAll("circle")
     .attr("fill", getNodeColor)
+    d3.selectAll("line")
+    .attr("stroke", getmylinefunc)
+    .attr("stroke-width", getmylinefuncstroke)
     if (duration * factor + minTime.val >= maxTime.val) timer.stop();
 
 });
@@ -151,6 +153,53 @@ function isNeighborLink(node, link) {
   return link.target.id === node.id || link.source.id === node.id
 }
 
+function getmylinefunc(line) {
+
+const $value = $('#slider11');
+var time = $value.val()
+if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
+        return 'orange'
+    }
+// else if( time >= timerArr[line.source.id] - interval * 0.01) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.02) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.03) {
+//     return 'orange'}
+// else if( time >= timerArr[line.source.id] - interval * 0.04) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.05) {
+    // return 'orange'}
+return 'rgba(255,255,255,1.0)'
+
+}
+
+function getmylinefuncstroke(line) {
+
+const $value = $('#slider11');
+var time = $value.val()
+if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
+        return 6
+    }
+// else if( time >= timerArr[line.source.id] - interval * 0.01) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.02) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.03) {
+//     return 'orange'}
+// else if( time >= timerArr[line.source.id] - interval * 0.04) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.05) {
+    // return 'orange'}
+return 2
+
+}
 
 function getNodeColor(node, neighbors) {
   if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
@@ -238,7 +287,7 @@ var linkElements = svg.append("g")
   .data(links)
   .enter().append("line")
     .attr("stroke-width", 2)
-	  .attr("stroke", "rgba(50, 50, 50, 0.2)")
+	  .attr("stroke", "rgba(255,255,255, 1.0)")
 
 var nodeElements = svg.append("g")
   .attr("class", "nodes")
@@ -256,20 +305,21 @@ var textElements = svg.append("g")
   .data(nodes)
   .enter().append("text")
     .text(function (node) { return  "S" + node.label })
+    .style("fill", "white")
     .on("click", function(selectedNode) {
         location.href = "http://localhost:5000/switches/" + selectedNode.label
     })
     .on("mouseover", function(node) {
       d3.select(this)
       .attr("font-size", "20")
-      .style("fill", "blue")
+      .style("fill", "orange")
       .style("text-decoration","underline")
       .text(d3.select(this).html() + " Level " + node.level)
     })
     .on("mouseout", function(node) {
       d3.select(this)
       .attr("font-size", "15")
-      .style("fill", "black")
+      .style("fill", "white")
       .style("text-decoration","")
       .text(function (node) { return  "S" + node.label })
     })

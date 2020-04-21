@@ -43,20 +43,21 @@ Flow
     }
     </style>
 
-<div class="row">
+<div class="row legend">
     <div style="text-align:center;">
-        <h2>Legend</h2>
+        <h2 style="color:white">Legend</h2>
         <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
 
         <p style="color:rgb(144,144,168);font-weight:bold">Not visited</p>
     </div>
 </div>
 </div>
+<br>
 <div class="row" style="text-align:center;">
 
     {% for i in range(noOfFlows) %}
-        <svg width="960" height="400" style="border:1px solid black" id="svg{{i}}">
-          <text x="0" y="15" fill="red" font-weight="bold">IP: {{flowIPS[i]}}</text>
+        <svg width="960" height="400" id="svg{{i}}">
+          <text x="300" y="15" fill="orange" font-weight="bold">IP: {{flowIPS[i]}}</text>
         </svg>
     {% endfor %}
 </div>
@@ -77,6 +78,9 @@ $value.on('input change', () => {
   var i;
     for (i = 0; i < noOfFlowsjs.val; i++) {
         updateNodes(times[i], "svg" + i)
+    }
+    for (i = 0; i < links.length; i++) {
+        updateLinks()
     }
 });
 });
@@ -114,6 +118,9 @@ var timer = d3.timer(function(duration) {
     for (i = 0; i < noOfFlowsjs.val; i++) {
         updateNodes(times[i], "svg" + i)
     }
+    for (i = 0; i < noOfFlowsjs.val; i++) {
+        updateLinks(times[i], "svg" + i)
+    }
     
     if (duration * factor + minTime.val >= maxTime.val) timer.stop();
 
@@ -122,6 +129,12 @@ var timer = d3.timer(function(duration) {
 function updateNodes(timerArr, id) {
   d3.select("#" + id).selectAll('circle')
   .attr('fill', function (node) { return getmyfunc(node, timerArr) })
+}
+
+function updateLinks(timerArr, id) {
+  d3.select("#" + id).selectAll('line')
+  .attr('stroke', function (line) { return getmylinefunc(line, timerArr) })
+  .attr('stroke-width', function (line) { return getmylinefuncstroke(line, timerArr)})
 }
 
 function getmyfunc(node, timerArr) {
@@ -146,7 +159,55 @@ function getmyfunc(node, timerArr) {
   else if( time >= timerArr[node.label] - interval * 0.05) {
       return 'red'
   }
-  return 'gray'
+  return "gray"
+
+}
+
+function getmylinefunc(line, timerArr) {
+
+const $value = $('#slider11');
+var time = $value.val()
+if ( time >= timerArr[ line.target.id] && time >= timerArr[line.source.id] ) {
+        return 'orange'
+    }
+// else if( time >= timerArr[line.source.id] - interval * 0.01) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.02) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.03) {
+//     return 'orange'}
+// else if( time >= timerArr[line.source.id] - interval * 0.04) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.05) {
+    // return 'orange'}
+return 'rgba(255,255,255,1.0)'
+
+}
+
+function getmylinefuncstroke(line, timerArr) {
+
+const $value = $('#slider11');
+var time = $value.val()
+if ( time >= timerArr[ line.target.id] && time >= timerArr[line.source.id] ) {
+        return 6
+    }
+// else if( time >= timerArr[line.source.id] - interval * 0.01) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.02) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.03) {
+//     return 'orange'}
+// else if( time >= timerArr[line.source.id] - interval * 0.04) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.05) {
+    // return 'orange'}
+return 2
 
 }
 
@@ -281,7 +342,7 @@ var linkElements = svg.append("g")
   .data(links)
   .enter().append("line")
     .attr("stroke-width", 2)
-	  .attr("stroke", "rgba(50, 50, 50, 0.2)")
+	  .attr("stroke", "rgba(255,255,255, 1.0)")
 
 var nodeElements = svg.append("g")
   .attr("class", "nodes")
@@ -299,20 +360,21 @@ var textElements = svg.append("g")
   .data(nodes)
   .enter().append("text")
     .text(function (node) { return  "S" + node.label })
+    .style("fill", "white")
     .on("click", function(selectedNode) {
         location.href = "http://localhost:5000/switches/" + selectedNode.label
     })
     .on("mouseover", function(node) {
       d3.select(this)
       .attr("font-size", "20")
-      .style("fill", "blue")
+      .style("fill", "orange")
       .style("text-decoration","underline")
       .text(d3.select(this).html() + " Level " + node.level)
     })
     .on("mouseout", function(node) {
       d3.select(this)
       .attr("font-size", "15")
-      .style("fill", "black")
+      .style("fill", "white")
       .style("text-decoration","")
       .text(function (node) { return  "S" + node.label })
     })
