@@ -7,7 +7,7 @@
         <h2>Level {{level}} Switches </h2>
         <ul>
             {% for switch in lvlToSwitch[level] %}
-            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}} {% if trigger_switch == switch %} <b style="color:rgb(255, 42, 42);">(Trigger)</b>{% endif %}</a>
+            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}} {% if trigger_switch == switch %} <b style="color:orange;">(Trigger)</b>{% endif %}</a>
             </li>
             
             {% endfor %}

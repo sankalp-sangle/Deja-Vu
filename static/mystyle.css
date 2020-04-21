@@ -1,5 +1,8 @@
 a {
-  color: rgb(3, 179, 32)
+  color: rgb(19, 243, 26);
+}
+a:hover {
+  color: #54bd59
 }
 
 .legend {
@@ -12,4 +15,41 @@ a {
 svg {
   border:3px solid black;
   background-color: rgb(41, 83, 110);
+}
+
+form {
+  border:3px solid black;
+  background-color: rgb(41, 83, 110);
+}
+
+circle {
+  cursor: pointer;
+}
+
+body {
+  background-color: rgb(53, 108, 143);
+}
+
+.valueSpan {
+  color: orange;
+  font-weight:bold;
+}
+
+input[type=submit] {
+  width: 50%;
+  background-color: #4CAF50;
+  color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+input[type=submit]:hover {
+  background-color: #45a049;
+}
+
+* {
+  color:  white;
 }

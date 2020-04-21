@@ -16,7 +16,7 @@ Flow
         <!-- <form class="range-field w-75"> -->
           <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
         <!-- </form> -->
-        <span style="color:rgb(255, 0, 0);font-weight:bold" class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
+        <span class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
     <!-- </div> -->
 </div>
 
@@ -57,7 +57,7 @@ Flow
 
     {% for i in range(noOfFlows) %}
         <svg width="960" height="400" id="svg{{i}}">
-          <text x="300" y="15" fill="orange" font-weight="bold">IP: {{flowIPS[i]}}</text>
+          <text x="300" y="15" fill="orange" font-weight="bold">IP: {{mapIp[flowIPS[i]]}}</text>
         </svg>
     {% endfor %}
 </div>
@@ -79,8 +79,8 @@ $value.on('input change', () => {
     for (i = 0; i < noOfFlowsjs.val; i++) {
         updateNodes(times[i], "svg" + i)
     }
-    for (i = 0; i < links.length; i++) {
-        updateLinks()
+    for (i = 0; i < noOfFlowsjs.val; i++) {
+        updateLinks(times[i], "svg" + i)
     }
 });
 });
@@ -102,7 +102,7 @@ var noOfFlowsjs = {{noOfFlowsJS|tojson|safe}}
 console.log("Flows " + noOfFlowsjs.val);
 
 var interval = maxTime.val - minTime.val
-var factor = interval / 45000
+var factor = interval / 20000
 var timer = d3.timer(function(duration) {
     // console.log(minTime)
     document.getElementById("slider11").value = duration * factor + minTime.val
@@ -351,8 +351,12 @@ var nodeElements = svg.append("g")
   .enter().append("circle")
     .attr("r", 10)
     .attr("fill", getNodeColor)
+    .attr("stroke", "black")
+    .attr("stroke-width", "1")
     .call(dragDrop)
-    .on('click', selectNode)
+    .on("click", function(selectedNode) {
+        location.href = "http://localhost:5000/switches/" + selectedNode.label
+    })
 
 var textElements = svg.append("g")
   .attr("class", "texts")

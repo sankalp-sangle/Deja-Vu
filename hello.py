@@ -21,6 +21,7 @@ switchArr = {}
 flowArr = {}
 G = {}
 levels = {}
+mapIp = {}
 
 nodelist = []
 linklist = []
@@ -78,9 +79,15 @@ def switches():
 def displaySwitch(switch):
     form = SimpleButton()
     # print(Swich.flowList)
+    points = []
+    for flow in switchArr[switch].flowList:
+        entry = {}
+        entry['SourceIP'] = mapIp[flow]
+        entry['Ratio'] = switchArr[switch].ratios[flow]
+        points.append(entry)
 
     if request.method == "GET":
-        return render_template('switchinfo.html', switch=switchArr[switch], form=form, level = levels[switch])
+        return render_template('switchinfo.html', points=points, mapIp=mapIp, switch=switchArr[switch], form=form, level = levels[switch])
     elif request.method == "POST":
         if form.validate_on_submit():
             panelList = []
@@ -107,7 +114,7 @@ def displaySwitch(switch):
             # print("\nPayload:\n" + payload)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
             dashboardId = response.json()['uid']
-            return render_template('switchinfo.html', switch=switchArr[switch], form = form, dashboardID=dashboardId, level = levels[switch])
+            return render_template('switchinfo.html', points = points, mapIp=mapIp, switch=switchArr[switch], form = form, dashboardID=dashboardId, level = levels[switch])
 
 @app.route('/query', methods=['GET', 'POST'])
 def query():
@@ -171,6 +178,9 @@ def packetwise():
 @app.route('/flows/<flow>')
 def displayFlow(flow):
     # print(flow)
+    if "." in flow:
+        flow = str(IP2Int(flow))
+        print(flow)
     res = g.mysql_manager.execute_query("select distinct source_ip from packetrecords")[1:]
     choices = [row[0] for row in res]
     lvlToSwitch = {}
@@ -192,11 +202,11 @@ def displayFlow(flow):
     for row in res:
         times[row[0]] = int(row[1])
     # print("Times" + str(times))
-    return render_template('flowinfo.html', flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
+    return render_template('flowinfo.html', mapIp=mapIp, flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
 
 @app.route('/flows')
 def flows():
-    return render_template('flows.html', flows = flowArr, switches = switchArr, trigger_switch=trigger_switch)
+    return render_template('flows.html', mapIp=mapIp, flows = flowArr, switches = switchArr, trigger_switch=trigger_switch)
 
 @app.route('/grafana')
 def grafana():
@@ -231,7 +241,7 @@ def allflows():
     maxLim2 = {"val":largestTime + 0.1 * interval}
 
 
-    return render_template('allflows.html', flowIPS=requestedFlows, noOfFlows=len(requestedFlows), noOfFlowsJS = {"val":len(requestedFlows)}, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    return render_template('allflows.html', mapIp = mapIp, flowIPS=requestedFlows, noOfFlows=len(requestedFlows), noOfFlowsJS = {"val":len(requestedFlows)}, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.before_request
 def before_request():
@@ -314,10 +324,33 @@ def printJson():
         linkEntry["strength"] = 0.7
         linklist.append(linkEntry)
 
+def Int2IP(ipnum):
+    o1 = int(ipnum / pow(2,24)) % 256
+    o2 = int(ipnum / pow(2,16)) % 256
+    o3 = int(ipnum / pow(2,8)) % 256
+    o4 = int(ipnum) % 256
+    return '%(o1)s.%(o2)s.%(o3)s.%(o4)s' % locals()
+
+def IP2Int(ip):
+    o = list(map(int, ip.split('.')))
+    res = (16777216 * o[0]) + (65536 * o[1]) + (256 * o[2]) + o[3]
+    return res
+
+def get_ip_addresses():
+    print("Generating IP map...")
+    result = mysql_manager.execute_query('select distinct source_ip from packetrecords')
+
+    for row in result[1:]:
+        for ip in row:
+            mapIp[ip] = Int2IP(ip)
+    print(mapIp)
+
+
 if __name__ == "__main__":
 
     generateGraph()
     getLevels()
+    get_ip_addresses()
 
     printJson()
     os.system('say "READY"')

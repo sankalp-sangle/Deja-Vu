@@ -132,8 +132,12 @@ var nodeElements = svg.append("g")
   .enter().append("circle")
     .attr("r", 10)
     .attr("fill", getNodeColor)
+    .attr("stroke", "black")
+    .attr("stroke-width", "1")
     .call(dragDrop)
-    .on('click', selectNode)
+    .on("click", function(selectedNode) {
+        location.href = "http://localhost:5000/switches/" + selectedNode.label
+    })
 
 var textElements = svg.append("g")
   .attr("class", "texts")
@@ -142,9 +146,6 @@ var textElements = svg.append("g")
   .enter().append("text")
     .text(function (node) { return  "S" + node.label })
     .style("fill", "white")
-    .on("click", function(selectedNode) {
-        location.href = "http://localhost:5000/switches/" + selectedNode.label
-    })
     .on("mouseover", function(node) {
       d3.select(this)
       .attr("font-size", "20")

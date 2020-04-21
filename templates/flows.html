@@ -10,7 +10,7 @@
         Here are the flows:
         <ul>
             {% for flow in switches[switch].flowList  %}
-                <li><a href={{url_for('displayFlow', flow=flow)}}>{{flow}}</a></li>
+                <li><a href={{url_for('displayFlow', flow=flow)}}>{{mapIp[flow]}}</a></li>
             {% endfor %}
         </ul>
     </div>

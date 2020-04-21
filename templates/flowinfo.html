@@ -12,7 +12,7 @@ Flow {{flo.identifier}}
 
 
   <div class="row">
-      <h2>Flow {{flo.identifier}}</h2>
+      <h2>Flow {{mapIp[flo.identifier]}}</h2>
   </div>
 <div class="row">
     {% for level in lvlToSwitch | sort%}
@@ -34,19 +34,21 @@ Flow {{flo.identifier}}
         <!-- <form class="range-field w-75"> -->
           <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
         <!-- </form> -->
-        <span style="color:rgb(255, 0, 0);font-weight:bold" class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
+        <span class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
     <!-- </div> -->
 </div>
 <div class = "row">
   <div class="col-sm-3">
     <div style="text-align:center;">
   <form action = "{{url_for('allflows')}}" method="POST">
-    <h2>Detected Flows</h2>
+    <h2 style="color:white">Detected Flows</h2>
     {% for choice in choices %}
-    <input type="checkbox" id="{{choice}}" name="{{choice}}" value="{{choice}}">
-    <label for="vehicle1"> {{choice}} </label><br>
+    <input type="checkbox" id="{{choice}}" name="{{choice}}" value="{{choice}}" {% if choice == flo.identifier %}
+    checked
+    {% endif %}>
+    <label for="vehicle1" style="color:white"> {{mapIp[choice]}} </label><br>
     {% endfor %}
-    <input type="submit" value="Compare Time Diagrams">
+    <input type="submit" value="Compare" id="submitButton">
   </form>
 </div>
 </div>
@@ -82,7 +84,7 @@ Flow {{flo.identifier}}
 <div class="col-sm-6">
 
 <svg width="960" height="400">
-  <text x="300" y="15" fill="orange" font-weight="bold">IP: {{flo.identifier}}</text>
+  <text x="300" y="15" fill="orange" font-weight="bold">IP: {{mapIp[flo.identifier]}}</text>
 </svg>
 
 </div>
@@ -102,6 +104,9 @@ $value.on('input change', () => {
   $valueSpan.html("Time: " + $value.val() + " nanos");
   d3.selectAll("circle")
   .attr("fill", getNodeColor)
+  d3.selectAll("line")
+  .attr("stroke", getmylinefunc)
+  .attr("stroke-width", getmylinefuncstroke)
 });
 });
 
@@ -118,7 +123,7 @@ var minTime = {{minLim2|tojson|safe}}
 var maxTime = {{maxLim2|tojson|safe}}
 
 var interval = maxTime.val - minTime.val
-var factor = interval / 15000
+var factor = interval / 20000
 var timer = d3.timer(function(duration) {
     // console.log(minTime)
     document.getElementById("slider11").value = duration * factor + minTime.val
@@ -296,8 +301,12 @@ var nodeElements = svg.append("g")
   .enter().append("circle")
     .attr("r", 10)
     .attr("fill", getNodeColor)
+    .attr("stroke", "black")
+    .attr("stroke-width", "1")
     .call(dragDrop)
-    .on('click', selectNode)
+    .on("click", function(selectedNode) {
+        location.href = "http://localhost:5000/switches/" + selectedNode.label
+    })
 
 var textElements = svg.append("g")
   .attr("class", "texts")
@@ -306,9 +315,6 @@ var textElements = svg.append("g")
   .enter().append("text")
     .text(function (node) { return  "S" + node.label })
     .style("fill", "white")
-    .on("click", function(selectedNode) {
-        location.href = "http://localhost:5000/switches/" + selectedNode.label
-    })
     .on("mouseover", function(node) {
       d3.select(this)
       .attr("font-size", "20")

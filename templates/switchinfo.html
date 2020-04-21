@@ -17,19 +17,130 @@ Switch {{switch.identifier}}
     </h1>
 </div>
 
+
+<div class="row">
+    <div class="col-sm-6">
 <h5>
     Flows:
     <ul>
         {% for flow in switch.flowList %}
-            <li> <a href={{ url_for('displayFlow', flow=flow)}}>{{flow}}</a>, Ratio : {{switch.ratios[flow]}}</li>
+            <li> <a href={{ url_for('displayFlow', flow=flow)}}>{{mapIp[flow]}}</a>, Ratio : {{switch.ratios[flow]}}</li>
         {% endfor %}
     </ul>
 </h5>
 
+
+
 {{ wtf.quick_form(form)}}
+</div>
+
+<div class="col-sm-6">
+<div id="my_dataviz" style="text-align: right;"></div>
+</div>
+
+
+</div>
 
 {% if dashboardID %}
 <iframe src="http://localhost:3000/d/{{dashboardID}}" width = "1152" height = "720"></iframe>
 {% endif %}
 
+<script src="https://d3js.org/d3.v4.js"></script>
+<script>
+
+
+    // set the dimensions and margins of the graph
+    var margin = {top: 10, right: 30, bottom: 90, left: 40},
+        width = 460 - margin.left - margin.right,
+        height = 450 - margin.top - margin.bottom;
+    
+    var colors = ["#ff0000", "#5a00ff", "#00ff00", "#0000ff", "#ffff00", "#00ffff"]
+    
+    // append the svg object to the body of the page
+    var svg = d3.select("#my_dataviz")
+      .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+    
+    // Parse the Data
+    
+    var data = {{points|tojson|safe}}
+    
+    // X axis
+    var x = d3.scaleBand()
+      .range([ 0, width ])
+      .domain(data.map(function(d) { return d.SourceIP; }))
+      .padding(0.2);
+    svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+        .attr("transform", "translate(-10,0)rotate(-45)")
+        .style("text-anchor", "end")
+        .attr("fill", "white")
+        .attr("font-size", 12)
+        .on("mouseover", function(d) {
+            d3.select(this).style("cursor", "pointer")
+        })
+        .on("mouseout", function(d) {
+            d3.select(this).style("cursor", "initial")
+        })
+        .on("click", function(d) {
+            location.href = "http://localhost:5000/flows/" + d;
+        })
+    
+    // Add Y axis
+    var y = d3.scaleLinear()
+      .domain([0, 1])
+      .range([ height, 0]);
+    svg.append("g")
+      .call(d3.axisLeft(y))
+      .selectAll("text")
+      .attr("fill", "white")
+      .attr("font-size", 12);
+    
+    svg.append("text")             
+    .attr("transform",
+          "translate(" + (width/2) + " ," + 
+                          (height + margin.top + 20) + ")")
+    .attr("fill", "white")
+    .style("text-anchor", "middle")
+    .text("Source IP");
+
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x",0 - (height / 2))
+      .attr("fill", "white")
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("Ratios");    
+    // Bars
+    svg.selectAll("mybar")
+      .data(data)
+      .enter()
+      .append("rect")
+        .attr("x", function(d) { return x(d.SourceIP); })
+        .attr("width", x.bandwidth())
+        .attr("fill", function (d, i) {
+          return colors[i%6]  // here it is picking up colors in sequence
+        })
+        .attr("height", function(d) { return height - y(0); }) // always equal to 0
+        .attr("y", function(d) { return y(0); })
+    
+    // Animation
+    svg.selectAll("rect")
+      .transition()
+      .ease(d3.easeExp)
+      .duration(1000)
+      .attr("y", function(d) { return y(d.Ratio); })
+      .attr("height", function(d) { return height - y(d.Ratio); })
+      .delay(function(d,i){console.log(i) ; return(i*200)})
+    
+    
+    
+    </script>
 {% endblock page_content %}
