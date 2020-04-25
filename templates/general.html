@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+
+{% block title %}
+General
+{% endblock title %}
+
+{% block navigationTabs %}
+    <li><a href={{ url_for('flows') }}>Go back</a></li>
+{% endblock navigationTabs %}
+
+{% block page_content %}
+
+<div class="row">
+    <!-- <div class="d-flex justify-content-center my-4"> -->
+        <!-- <form class="range-field w-75"> -->
+          <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
+        <!-- </form> -->
+        <span class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
+    <!-- </div> -->
+</div>
+
+<style>
+    .box{
+        width:25px;
+        height:25px;
+    }
+    .blue{
+        background:blue
+    }
+
+    .red{
+        background:#f00;
+    }
+    .yellow{
+        background:rgb(251, 255, 10);
+    }
+    .gray{
+        background:rgb(144, 144, 168);
+    }
+    .black{
+        background:#000;
+    }
+    </style>
+<div class="col-sm-12">
+
+<svg width="960" height="400">
+  <text x="300" y="15" fill="orange" font-weight="bold">Switch</text>
+</svg>
+
+</div>
+</div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+
+$(document).ready(function() {
+
+const $valueSpan = $('.valueSpan');
+const $value = $('#slider11');
+
+
+$value.on('input change', () => {
+
+  var x = $value.val()  
+  $valueSpan.html("Time: " + $value.val() + " nanos");
+  d3.selectAll("circle")
+    .attr("r", function(node) { return getRadius(node) })
+});
+});
+
+var nodes = {{nodelist|tojson|safe}}
+
+var links = {{linklist|tojson|safe}}
+
+var datass = {{datas|tojson|safe}}
+
+var limitss = {{limits|tojson|safe}}
+
+var minTime = {{minLim2|tojson|safe}}
+
+var maxTime = {{maxLim2|tojson|safe}}
+
+var interval = maxTime.val - minTime.val
+var factor = interval / 20000
+var timer = d3.interval(function(duration) {
+    // console.log(minTime)
+    document.getElementById("slider11").value = duration * factor + minTime.val
+    const $valueSpan = $('.valueSpan');
+    const $value = $('#slider11');
+    $valueSpan.html("Time: " + $value.val() + " nanos");
+    // console.log(duration);
+    d3.selectAll("circle")
+    .attr("r", function(node) { return getRadius(node) })
+
+    if (duration * factor + minTime.val >= maxTime.val) timer.stop();
+
+}, 20);
+
+
+function getNeighbors(node) {
+  return links.reduce(function (neighbors, link) {
+      if (link.target.id === node.id) {
+        neighbors.push(link.source.id)
+      } else if (link.source.id === node.id) {
+        neighbors.push(link.target.id)
+      }
+      return neighbors
+    },
+    [node.id]
+  )
+}
+
+function isNeighborLink(node, link) {
+  return link.target.id === node.id || link.source.id === node.id
+}
+
+function getmylinefunc(line) {
+
+const $value = $('#slider11');
+var time = $value.val()
+if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
+        return 'orange'
+    }
+// else if( time >= timerArr[line.source.id] - interval * 0.01) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.02) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.03) {
+//     return 'orange'}
+// else if( time >= timerArr[line.source.id] - interval * 0.04) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.05) {
+    // return 'orange'}
+return 'rgba(255,255,255,1.0)'
+
+}
+
+function getmylinefuncstroke(line) {
+
+const $value = $('#slider11');
+var time = $value.val()
+if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
+        return 6
+    }
+// else if( time >= timerArr[line.source.id] - interval * 0.01) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.02) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.03) {
+//     return 'orange'}
+// else if( time >= timerArr[line.source.id] - interval * 0.04) {
+//     return 'orange'
+// }
+// else if( time >= timerArr[line.source.id] - interval * 0.05) {
+    // return 'orange'}
+return 2
+
+}
+
+function getRadius(node) {
+    const $value = $('#slider11');
+    var time = $value.val()
+    // console.log(datass);
+    var timeArr = datass[node.label]
+    var limiters = limitss[node.label]
+    if(time < limiters.min || time > limiters.max) {
+        console.log(node.label + " " + " " + time);
+        return 10
+    }
+    // var ind = Math.floor((time - limiters.min) * timeArr.length / (limiters.max - limiters.min))
+
+    var l = 0
+    var r = timeArr.length - 1
+    while(l <= r) {
+        var mid = Math.floor( (l + (r - l) / 2))
+        if(timeArr[mid].time_in < time) {
+            l = mid + 1
+        }
+        else {
+            r = mid - 1
+        }
+    }
+    ind = l
+
+    ind = ind % timeArr.length
+    
+    // console.log(ind);
+    // console.log(datass[0].time_stamp);
+    console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_in);
+
+    var value = timeArr[ind].queue_depth
+
+    return 10 + 0.04 * value
+
+
+}
+
+function getNodeColor(node, neighbors) {
+//   if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
+//     return node.level === 1 ? 'blue' : 'green'
+//   }
+//   const $value = $('#slider11');
+//   var time = $value.val()
+//   if ( time >= times[node.label] ) {
+//           return 'yellow'
+//       }
+//   else if( time >= times[node.label] - interval * 0.01) {
+//       return 'yellow'
+//   }
+//   else if( time >= times[node.label] - interval * 0.02) {
+//       return 'gray'
+//   }
+//   else if( time >= times[node.label] - interval * 0.03) {
+//       return 'red'
+//   }
+//   else if( time >= times[node.label] - interval * 0.04) {
+//       return 'gray'
+//   }
+//   else if( time >= times[node.label] - interval * 0.05) {
+//       return 'red'
+//   }
+  return 'gray'
+}
+
+
+function getLinkColor(node, link) {
+  return isNeighborLink(node, link) ? 'green' : '#E5E5E5'
+}
+
+function getTextColor(node, neighbors) {
+  return Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1 ? 'green' : 'black'
+}
+
+var width = 1000
+var height = 800
+
+var svg = d3.select('svg')
+svg.attr('width', width).attr('height', height)
+
+// simulation setup with all forces
+var linkForce = d3
+  .forceLink()
+  .id(function (link) { return link.id })
+  .distance(function () { return 200 })
+  .strength(function (link) { return 0 })
+
+var simulation = d3
+  .forceSimulation()
+  .force('link', linkForce)
+  // .force('charge', d3.forceManyBody().strength(-400))
+  // .force('center', d3.forceCenter(width / 2, height / 2))
+  // .force('collide', d3.forceCollide().strength(1))
+
+var dragDrop = d3.drag().on('start', function (node) {
+  node.fx = node.x
+  node.fy = node.y
+}).on('drag', function (node) {
+  simulation.alphaTarget(0.1).restart()
+  node.fx = d3.event.x
+  node.fy = d3.event.y
+}).on('end', function (node) {
+  if (!d3.event.active) {
+    simulation.alphaTarget(0)
+  }
+  node.fx = null
+  node.fy = null
+})
+
+function selectNode(selectedNode) {
+  var neighbors = getNeighbors(selectedNode)
+
+  // we modify the styles to highlight selected nodes
+  nodeElements.attr('fill', function (node) { return getNodeColor(node, neighbors) })
+  textElements.attr('fill', function (node) { return getTextColor(node, neighbors) })
+  linkElements.attr('stroke', function (link) { return getLinkColor(selectedNode, link) })
+}
+
+var linkElements = svg.append("g")
+  .attr("class", "links")
+  .selectAll("line")
+  .data(links)
+  .enter().append("line")
+    .attr("stroke-width", 2)
+	  .attr("stroke", "rgba(255,255,255, 1.0)")
+
+var nodeElements = svg.append("g")
+  .attr("class", "nodes")
+  .selectAll("circle")
+  .data(nodes)
+  .enter().append("circle")
+    .attr("r", 10)
+    .attr("cx", 500)
+    .attr("cy", 500)
+    .attr("fill", getNodeColor)
+    .attr("stroke", "black")
+    .attr("stroke-width", "1")
+    .call(dragDrop)
+    .on("click", function(selectedNode) {
+        location.href = "http://localhost:5000/switches/" + selectedNode.label
+    })
+
+var textElements = svg.append("g")
+  .attr("class", "texts")
+  .selectAll("text")
+  .data(nodes)
+  .enter().append("text")
+    .text(function (node) { return  "S" + node.label })
+    .style("fill", "white")
+    .on("mouseover", function(node) {
+      d3.select(this)
+      .attr("font-size", "20")
+      .style("fill", "orange")
+      .style("text-decoration","underline")
+      .text(d3.select(this).html() + " Level " + node.level)
+    })
+    .on("mouseout", function(node) {
+      d3.select(this)
+      .attr("font-size", "15")
+      .style("fill", "white")
+      .style("text-decoration","")
+      .text(function (node) { return  "S" + node.label })
+    })
+	  .attr("font-size", 15)
+	  .attr("dx", 15)
+    .attr("dy", 4)
+    // .on('click', gotoSwitch) //my addition
+
+
+
+simulation.nodes(nodes).on('tick', () => {
+  nodeElements
+    .attr('cx', function (node) { return node.x })
+    .attr('cy', function (node) { return node.y })
+  textElements
+    .attr('x', function (node) { return node.x })
+    .attr('y', function (node) { return node.y })
+  linkElements
+    .attr('x1', function (link) { return link.source.x })
+    .attr('y1', function (link) { return link.source.y })
+    .attr('x2', function (link) { return link.target.x })
+    .attr('y2', function (link) { return link.target.y })
+})
+
+simulation.force("link").links(links)
+</script>
+</div>
+
+{% endblock page_content %}
