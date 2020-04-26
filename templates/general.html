@@ -65,6 +65,9 @@ $value.on('input change', () => {
   $valueSpan.html("Time: " + $value.val() + " nanos");
   d3.selectAll("circle")
     .attr("r", function(node) { return getRadius(node) })
+  d3.selectAll("line")
+    .attr("stroke-width", getThickness)
+    .attr("stroke", getStrokeColour)
 });
 });
 
@@ -73,6 +76,10 @@ var nodes = {{nodelist|tojson|safe}}
 var links = {{linklist|tojson|safe}}
 
 var datass = {{datas|tojson|safe}}
+
+var throughputs = {{throughput|tojson|safe}}
+
+var throughputlimitss = {{throughputlimits|tojson|safe}}
 
 var limitss = {{limits|tojson|safe}}
 
@@ -91,8 +98,15 @@ var timer = d3.interval(function(duration) {
     // console.log(duration);
     d3.selectAll("circle")
     .attr("r", function(node) { return getRadius(node) })
+    d3.selectAll("line")
+    .attr("stroke-width", getThickness)
+    .attr("stroke", getStrokeColour)
 
-    if (duration * factor + minTime.val >= maxTime.val) timer.stop();
+    if (duration * factor + minTime.val >= maxTime.val) {
+      console.log("Stopping");
+      timer.stop();
+    }
+    
 
 }, 20);
 
@@ -114,27 +128,92 @@ function isNeighborLink(node, link) {
   return link.target.id === node.id || link.source.id === node.id
 }
 
-function getmylinefunc(line) {
-
-const $value = $('#slider11');
+function getThickness(line) {
+  const $value = $('#slider11');
 var time = $value.val()
-if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
-        return 'orange'
+
+  var throughs = throughputs[line.source.id + "-" + line.target.id]
+    // console.log(line.source.id + "-" + line.target.id);
+    var limiters = throughputlimitss[line.source.id + "-" + line.target.id]
+    console.log(limiters);
+    if(limiters == undefined || time < limiters.min || time > limiters.max) {
+        return 2
     }
-// else if( time >= timerArr[line.source.id] - interval * 0.01) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.02) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.03) {
-//     return 'orange'}
-// else if( time >= timerArr[line.source.id] - interval * 0.04) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.05) {
-    // return 'orange'}
-return 'rgba(255,255,255,1.0)'
+    // var ind = Math.floor((time - limiters.min) * timeArr.length / (limiters.max - limiters.min))
+
+    var l = 0
+    var r = throughs.length - 1
+    while(l <= r) {
+        var mid = Math.floor( (l + (r - l) / 2))
+        if(throughs[mid].time_out < time) {
+            l = mid + 1
+        }
+        else {
+            r = mid - 1
+        }
+    }
+    ind = l
+
+    ind = ind % throughs.length
+    
+    // console.log(ind);
+    // console.log(datass[0].time_stamp);
+    // console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_out);
+
+    var value = throughs[ind].throughput
+
+    return 1 + 3 * value
+
+}
+
+function getStrokeColour(line) {
+  const $value = $('#slider11');
+var time = $value.val()
+
+  var throughs = throughputs[line.source.id + "-" + line.target.id]
+    // console.log(line.source.id + "-" + line.target.id);
+    var limiters = throughputlimitss[line.source.id + "-" + line.target.id]
+    console.log(limiters);
+    if(limiters == undefined ) {
+        return "rgba(255,255,255,1)"
+    }
+    if(time < limiters.min || time > limiters.max) {
+      return "rgba(255,255,255,1)"
+    }
+    // var ind = Math.floor((time - limiters.min) * timeArr.length / (limiters.max - limiters.min))
+
+    var l = 0
+    var r = throughs.length - 1
+    while(l <= r) {
+        var mid = Math.floor( (l + (r - l) / 2))
+        if(throughs[mid].time_out < time) {
+            l = mid + 1
+        }
+        else {
+            r = mid - 1
+        }
+    }
+    ind = l
+
+    ind = ind % throughs.length
+    
+    // console.log(ind);
+    // console.log(datass[0].time_stamp);
+    // console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_out);
+
+    var value = throughs[ind].throughput
+
+    var col = Math.floor( (255 / 10) * value)
+
+    console.log("Color: " + col);
+    
+    return "rgba(" + Math.min(255,col) + "," + Math.max((255 - col),0) + ",0,1)"
+
+    // if (value > 0.5) {
+    //   return "red"
+    // }
+    // return "white"
+
 
 }
 
@@ -168,9 +247,13 @@ function getRadius(node) {
     // console.log(datass);
     var timeArr = datass[node.label]
     var limiters = limitss[node.label]
+    if(limiters == undefined) {
+      // console.log("Undefined is " + node.label);
+      return 20
+    }
     if(time < limiters.min || time > limiters.max) {
         console.log(node.label + " " + " " + time);
-        return 10
+        return 20
     }
     // var ind = Math.floor((time - limiters.min) * timeArr.length / (limiters.max - limiters.min))
 
@@ -178,7 +261,7 @@ function getRadius(node) {
     var r = timeArr.length - 1
     while(l <= r) {
         var mid = Math.floor( (l + (r - l) / 2))
-        if(timeArr[mid].time_in < time) {
+        if(timeArr[mid].time_out < time) {
             l = mid + 1
         }
         else {
@@ -191,11 +274,11 @@ function getRadius(node) {
     
     // console.log(ind);
     // console.log(datass[0].time_stamp);
-    console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_in);
+    console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_out);
 
     var value = timeArr[ind].queue_depth
 
-    return 10 + 0.04 * value
+    return 20 + 4 * value
 
 
 }
@@ -224,7 +307,7 @@ function getNodeColor(node, neighbors) {
 //   else if( time >= times[node.label] - interval * 0.05) {
 //       return 'red'
 //   }
-  return 'gray'
+  return 'yellow'
 }
 
 
@@ -293,7 +376,7 @@ var nodeElements = svg.append("g")
   .selectAll("circle")
   .data(nodes)
   .enter().append("circle")
-    .attr("r", 10)
+    .attr("r", 20)
     .attr("cx", 500)
     .attr("cy", 500)
     .attr("fill", getNodeColor)
@@ -326,7 +409,7 @@ var textElements = svg.append("g")
       .text(function (node) { return  "S" + node.label })
     })
 	  .attr("font-size", 15)
-	  .attr("dx", 15)
+	  .attr("dx", 20)
     .attr("dy", 4)
     // .on('click', gotoSwitch) //my addition
 

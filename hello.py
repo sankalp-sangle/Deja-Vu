@@ -96,7 +96,8 @@ def displaySwitch(switch):
 
             panelList.append(Panel(gridPos=Grid_Position(x=0,y=0), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=QueryBuilder(time_column = "time_stamp", value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
             panelList.append(Panel(gridPos=Grid_Position(x=0,y=11), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=QueryBuilder(time_column = "time_stamp", value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE, lines = False, bars = True, stack = True, percentage = True))
-            panelList.append(Panel(gridPos=Grid_Position(x=0,y=22),title="Default Panel: Link Utilization", targets = [Target(rawSql=QueryBuilder(value = 'link_utilization', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
+            panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Egress Throughput at Switch " + switch, targets = [Target(rawSql=QueryBuilder(value = 'throughput', metricList = ['from_switch','to_switch'], table='egressthroughput', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
+            panelList.append(Panel(gridPos=Grid_Position(x=0,y=33),title="Default Panel: Link Utilization", targets = [Target(rawSql=QueryBuilder(value = 'link_utilization', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
             panelList.append(Panel(gridPos=Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Target(rawSql=QueryBuilder(value = 'source_ip % 10', metricList = ['source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE, points = True, lines = False))
             panelList.append(Panel(gridPos=Grid_Position(x=12,y=11),title="Default Panel: Queue Depth", targets = [Target(rawSql=QueryBuilder(value = 'queue_depth', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
             panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Ingress Throughput at Switch " + switch, targets = [Target(rawSql=QueryBuilder(value = 'throughput', metricList = ['switch', 'source_ip'], table='throughput', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
@@ -309,22 +310,51 @@ def topo():
 
 @app.route('/general')
 def general():
-    res = g.mysql_manager.execute_query('select switch, time_in, queue_depth * 80 DIV 1500 from packetrecords order by time_in')[1:]
+
+    throughputlimits = {}
+    res3 = g.mysql_manager.execute_query('select from_switch, to_switch, min(time_out), max(time_out) from egressthroughput group by 1,2')[1:]
+    print(res3)
+    for row in res3:
+        entry = {}
+        entry['min'] = row[2]
+        entry['max'] = row[3]
+        throughputlimits[str(row[0]) + "-" + str(row[1])] = entry
+
+
+    res = g.mysql_manager.execute_query('select time_out, from_switch, to_switch, throughput, time_in from egressthroughput order by time_out')[1:]
+    throughput = {}
+    for row in res:
+        if str(row[1]) + "-" + str(row[2]) in throughput:
+            entry2 = {}
+            entry2['time_out'] = ( row[0] + row[4] ) // 2
+            entry2['throughput'] = str(row[3])
+            throughput[str(row[1]) + "-" + str(row[2])].append(entry2)
+        else:
+            throughput[str(row[1]) + "-" + str(row[2])] = []
+            entry2 = {}
+            entry2['time_out'] = ( row[0] + row[4] ) // 2
+            entry2['throughput'] = str(row[3])
+            throughput[str(row[1]) + "-" + str(row[2])].append(entry2)
+
+
+
+    res = g.mysql_manager.execute_query('select switch, time_out, queue_depth * 80 DIV 1500 from packetrecords order by time_out')[1:]
     datas = {}
     for row in res:
         if row[0] in datas:
             entry = {}
-            entry['time_in'] = row[1]
+            entry['time_out'] = row[1]
             entry['queue_depth'] = row[2]
             datas[row[0]].append(entry)
         else:
             datas[row[0]] = []
             entry = {}
-            entry['time_in'] = row[1]
+            entry['time_out'] = row[1]
             entry['queue_depth'] = row[2]
+            datas[row[0]].append(entry)
 
     limits = {}
-    res3 = g.mysql_manager.execute_query('select switch, min(time_in), max(time_out) from packetrecords group by switch')[1:]
+    res3 = g.mysql_manager.execute_query('select switch, min(time_out), max(time_out) from packetrecords group by switch')[1:]
     print(res3)
     for row in res3:
         entry = {}
@@ -332,8 +362,8 @@ def general():
         entry['max'] = row[2]
         limits[row[0]] = entry
 
-    res1 = g.mysql_manager.execute_query('select min(time_in) from packetrecords')[1:]
-    res2 = g.mysql_manager.execute_query('select max(time_out) from packetrecords')[1:]
+    res1 = g.mysql_manager.execute_query('select min(time_out) from egressthroughput')[1:]
+    res2 = g.mysql_manager.execute_query('select max(time_out) from egressthroughput')[1:]
 
     interval = res2[0][0] - res1[0][0]
     
@@ -342,13 +372,13 @@ def general():
     minLim2 = {"val":res1[0][0]}
     maxLim2 = {"val":res2[0][0]}
 
-    return render_template('general.html',  nodelist=nodelist, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    return render_template('general.html', throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 
 def printJson():
     
-    BEGINX = 150
-    BEGINY = 150
+    BEGINX = 20
+    BEGINY = 70
     added = {}
     for node in levels:
         added[levels[node]] = []
@@ -360,8 +390,8 @@ def printJson():
         nodeEntry["label"] = node
         nodeEntry["level"] = levels[node]
         added[levels[node]].append(node)
-        nodeEntry["x"] = BEGINX + 100 * len(added[levels[node]])
-        nodeEntry["y"] = BEGINY + (3-levels[node]) * 100
+        nodeEntry["x"] = BEGINX + 200 * len(added[levels[node]])
+        nodeEntry["y"] = BEGINY + (3-levels[node]) * 200
         nodelist.append(nodeEntry)
     
     links = mysql_manager.execute_query("select * from links")[1:]
