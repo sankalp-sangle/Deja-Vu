@@ -43,6 +43,8 @@ General
     </style>
 <div class="col-sm-12">
 
+<p id = "disp"></p>
+
 <svg width="960" height="400">
   <text x="300" y="15" fill="orange" font-weight="bold">Switch</text>
 </svg>
@@ -87,9 +89,14 @@ var minTime = {{minLim2|tojson|safe}}
 
 var maxTime = {{maxLim2|tojson|safe}}
 
+// Define the div for the tooltip
+var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")				
+    .style("opacity", 0);
+
 var interval = maxTime.val - minTime.val
 var factor = interval / 20000
-var timer = d3.interval(function(duration) {
+var timer = d3.timer(function(duration) {
     // console.log(minTime)
     document.getElementById("slider11").value = duration * factor + minTime.val
     const $valueSpan = $('.valueSpan');
@@ -108,7 +115,7 @@ var timer = d3.interval(function(duration) {
     }
     
 
-}, 20);
+});
 
 
 function getNeighbors(node) {
@@ -278,7 +285,49 @@ function getRadius(node) {
 
     var value = timeArr[ind].queue_depth
 
-    return 20 + 4 * value
+    return 20 + 0.04 * value
+
+
+}
+
+function getDepth(node) {
+    const $value = $('#slider11');
+    var time = $value.val()
+    // console.log(datass);
+    var timeArr = datass[node.label]
+    var limiters = limitss[node.label]
+    if(limiters == undefined) {
+      // console.log("Undefined is " + node.label);
+      return 0
+    }
+    if(time < limiters.min || time > limiters.max) {
+        console.log(node.label + " " + " " + time);
+        return 0
+    }
+    // var ind = Math.floor((time - limiters.min) * timeArr.length / (limiters.max - limiters.min))
+
+    var l = 0
+    var r = timeArr.length - 1
+    while(l <= r) {
+        var mid = Math.floor( (l + (r - l) / 2))
+        if(timeArr[mid].time_out < time) {
+            l = mid + 1
+        }
+        else {
+            r = mid - 1
+        }
+    }
+    ind = l
+
+    ind = ind % timeArr.length
+    
+    // console.log(ind);
+    // console.log(datass[0].time_stamp);
+    // console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_out);
+
+    var value = timeArr[ind].queue_depth
+
+    return value
 
 
 }
@@ -313,6 +362,44 @@ function getNodeColor(node, neighbors) {
 
 function getLinkColor(node, link) {
   return isNeighborLink(node, link) ? 'green' : '#E5E5E5'
+}
+
+function getVal(line) {
+  const $value = $('#slider11');
+var time = $value.val()
+
+  var throughs = throughputs[line.source.id + "-" + line.target.id]
+    // console.log(line.source.id + "-" + line.target.id);
+    var limiters = throughputlimitss[line.source.id + "-" + line.target.id]
+    console.log(limiters);
+    if(limiters == undefined || time < limiters.min || time > limiters.max) {
+        return 0
+    }
+    // var ind = Math.floor((time - limiters.min) * timeArr.length / (limiters.max - limiters.min))
+
+    var l = 0
+    var r = throughs.length - 1
+    while(l <= r) {
+        var mid = Math.floor( (l + (r - l) / 2))
+        if(throughs[mid].time_out < time) {
+            l = mid + 1
+        }
+        else {
+            r = mid - 1
+        }
+    }
+    ind = l
+
+    ind = ind % throughs.length
+    
+    // console.log(ind);
+    // console.log(datass[0].time_stamp);
+    // console.log(node.label + " " + ind + " " + timeArr[ind].queue_depth + " "+timeArr[ind].time_out);
+
+    return throughs[ind].throughput
+
+    
+
 }
 
 function getTextColor(node, neighbors) {
@@ -370,6 +457,25 @@ var linkElements = svg.append("g")
   .enter().append("line")
     .attr("stroke-width", 2)
 	  .attr("stroke", "rgba(255,255,255, 1.0)")
+    // .on("mouseover", function(line) {
+    //   document.getElementById("disp").innerHTML = getVal(line) + " Gbps"
+    // })
+    .on("mouseover", function(line) {		
+            div.transition()		
+                .duration(20)		
+                .style("opacity", .9);		
+            div	.html(line.source.id + "->" + line.target.id + " " + getVal(line) + " Gbps")	
+                .style("left", (d3.event.pageX + 20) + "px")		
+                .style("top", (d3.event.pageY) + "px");	
+            })					
+        .on("mouseout", function(line) {		
+            div.transition()		
+                .duration(10)		
+                .style("opacity", 0);	
+        })
+        .on("click", function(line) {
+          location.href = "http://localhost:5000/test/" + line.source.id + "/" + line.target.id
+        });
 
 var nodeElements = svg.append("g")
   .attr("class", "nodes")
@@ -386,6 +492,19 @@ var nodeElements = svg.append("g")
     .on("click", function(selectedNode) {
         location.href = "http://localhost:5000/switches/" + selectedNode.label
     })
+    .on("mouseover", function(node) {		
+            div.transition()		
+                .duration(20)		
+                .style("opacity", .9);		
+            div	.html( getDepth(node) + " Packets")	
+                .style("left", (d3.event.pageX + 20) + "px")		
+                .style("top", (d3.event.pageY) + "px");	
+            })					
+        .on("mouseout", function(node) {		
+            div.transition()		
+                .duration(10)		
+                .style("opacity", 0);	
+        });
 
 var textElements = svg.append("g")
   .attr("class", "texts")

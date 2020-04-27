@@ -50,6 +50,19 @@ input[type=submit]:hover {
   background-color: #45a049;
 }
 
+div.tooltip {	
+  position: absolute;			
+  text-align: center;			
+  width: 70px;					
+  height: 35px;					
+  padding: 2px;				
+  font: 12px sans-serif;		
+  background: rgba(5, 255, 159, 0.493);	
+  border: 0px;		
+  border-radius: 8px;			
+  pointer-events: none;			
+}
+
 * {
   color:  white;
 }

@@ -374,6 +374,22 @@ def general():
 
     return render_template('general.html', throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
+@app.route('/test/<from_switch>/<to_switch>')
+def test(from_switch, to_switch):
+    res = g.mysql_manager.execute_query('select time_in, throughput from egressthroughput where from_switch = \'' + from_switch + '\' and to_switch = \'' + to_switch + '\' order by time_out')[1:]
+    datas = []
+    entry = {}
+    inner = {}
+    # entry['date'] = 'date'
+    # entry['value'] = 'value'
+    for i,row in enumerate(res):
+        datas.append({'date':row[0], 'value':str(row[1])})
+    # datas.append({'date':2, 'value':5})
+    # datas.append({'date':3, 'value':6})
+    # datas.append({'date':4, 'value':7})
+        
+
+    return render_template('test.html', data=datas)
 
 def printJson():
     
