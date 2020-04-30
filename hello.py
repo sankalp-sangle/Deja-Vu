@@ -372,7 +372,9 @@ def general():
     minLim2 = {"val":res1[0][0]}
     maxLim2 = {"val":res2[0][0]}
 
-    return render_template('general.html', throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    maxDepth = g.mysql_manager.execute_query('select max(queue_depth) from packetrecords')[1:][0][0]
+
+    return render_template('general.html', maxD = {"val":(maxDepth * 80) // 1500}, throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.route('/test/<from_switch>/<to_switch>')
 def test(from_switch, to_switch):

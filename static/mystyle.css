@@ -63,8 +63,31 @@ div.tooltip {
   pointer-events: none;			
 }
 
-button {
+button{
   background-color: #4CAF50;
+  border-radius: 12px;
+  padding: 14px 20px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: rgb(142, 149, 161);
+  border-radius: 12px;
+  padding: 14px 20px;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+button:disabled:hover {
+  background-color: rgb(142, 149, 161);
+  border-radius: 12px;
+  padding: 14px 20px;
+}
+
+textarea {
+  background:rgb(41, 83, 110);
 }
 
 * {

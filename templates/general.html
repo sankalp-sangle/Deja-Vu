@@ -11,10 +11,16 @@ General
 {% block page_content %}
 
 <div class="row">
-  <div class="col-sm-4">
-    <button onclick="start()">Play</button>
-    <button onclick="myFunction()">Pause</button>
-    <button onclick="resume()">Resume</button>
+  <div class="col-sm-6">
+    <button id="play" onclick="start()">Play</button>
+    <button id="pause" onclick="myFunction()" disabled>Pause</button>
+    <button id="resume" onclick="resume()" disabled>Resume</button>
+  </div>
+
+  <div class = "col-sm-6">
+    <button onclick="updateMaxD()">Update Maximum Depth</button>
+    <textarea id="maxD" rows="1" cols="10">
+      {{maxD.val}}</textarea>
   </div>
 </div>
 
@@ -23,7 +29,7 @@ General
         <!-- <form class="range-field w-75"> -->
           <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
         <!-- </form> -->
-        <span class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
+        <span class="font-weight-bold text-primary ml-2 mt-1 valueSpan">Press Play to begin...</span>
     <!-- </div> -->
 </div>
 
@@ -96,6 +102,11 @@ var minTime = {{minLim2|tojson|safe}}
 
 var maxTime = {{maxLim2|tojson|safe}}
 
+var maxRad = 60
+var minRad = 20
+
+var maxD = {{maxD|tojson|safe}}
+
 // Define the div for the tooltip
 var div = d3.select("body").append("div")	
     .attr("class", "tooltip")				
@@ -106,6 +117,10 @@ var factor = interval / 20000
 var timer
 
 var base = minTime.val
+
+const $play=$('#play')
+const $pause=$('#pause')
+const $resume=$('#resume')
 
 function start () {
       timer = d3.timer(function(duration) {
@@ -122,10 +137,21 @@ function start () {
       .attr("stroke", getStrokeColour)
 
       if (duration * factor + base >= maxTime.val) {
+        $play.prop('disabled',false);
+        $pause.prop('disabled',true);
+        $resume.prop('disabled',true);
         console.log("Stopping");
         timer.stop();
       }
+
+      
+      
+
+
   });
+
+  $play.prop('disabled',true);
+      $pause.prop('disabled',false);
 }
 
 function resume () {
@@ -143,19 +169,32 @@ function resume () {
       .attr("stroke", getStrokeColour)
 
       if (duration * factor + base >= maxTime.val) {
+        $play.prop('disabled',false);
+        $pause.prop('disabled',true);
+        $resume.prop('disabled',true);
         console.log("Stopping");
         timer.stop();
       }
+
+      
   });
+
+  $pause.prop('disabled',false);
+      $resume.prop('disabled',true );
 }
 
 function myFunction() {
   timer.stop();
   const $valueSlider = $('#slider11');
   base = Number($valueSlider.val())
+  $resume.prop('disabled',false);
+  $pause.prop('disabled',true);
 }
 
-
+function updateMaxD () {
+  const $maxD = $('#maxD');
+  maxD.val = Number($maxD.val());
+}
 
 function getNeighbors(node) {
   return links.reduce(function (neighbors, link) {
@@ -324,7 +363,7 @@ function getRadius(node) {
 
     var value = timeArr[ind].queue_depth
 
-    return 20 + 0.04 * value
+    return Math.min(maxRad, 20 + ((maxRad - minRad)/(maxD.val)) * value)
 
 
 }
