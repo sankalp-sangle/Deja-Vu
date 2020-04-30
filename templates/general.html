@@ -11,6 +11,14 @@ General
 {% block page_content %}
 
 <div class="row">
+  <div class="col-sm-4">
+    <button onclick="start()">Play</button>
+    <button onclick="myFunction()">Pause</button>
+    <button onclick="resume()">Resume</button>
+  </div>
+</div>
+
+<div class="row">
     <!-- <div class="d-flex justify-content-center my-4"> -->
         <!-- <form class="range-field w-75"> -->
           <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
@@ -41,16 +49,14 @@ General
         background:#000;
     }
     </style>
+
+
 <div class="col-sm-12">
-
-<p id = "disp"></p>
-
 <svg width="960" height="400">
   <text x="300" y="15" fill="orange" font-weight="bold">Switch</text>
 </svg>
+</div>
 
-</div>
-</div>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
@@ -70,6 +76,7 @@ $value.on('input change', () => {
   d3.selectAll("line")
     .attr("stroke-width", getThickness)
     .attr("stroke", getStrokeColour)
+  base = Number(x)
 });
 });
 
@@ -96,26 +103,58 @@ var div = d3.select("body").append("div")
 
 var interval = maxTime.val - minTime.val
 var factor = interval / 20000
-var timer = d3.timer(function(duration) {
-    // console.log(minTime)
-    document.getElementById("slider11").value = duration * factor + minTime.val
-    const $valueSpan = $('.valueSpan');
-    const $value = $('#slider11');
-    $valueSpan.html("Time: " + $value.val() + " nanos");
-    // console.log(duration);
-    d3.selectAll("circle")
-    .attr("r", function(node) { return getRadius(node) })
-    d3.selectAll("line")
-    .attr("stroke-width", getThickness)
-    .attr("stroke", getStrokeColour)
+var timer
 
-    if (duration * factor + minTime.val >= maxTime.val) {
-      console.log("Stopping");
-      timer.stop();
-    }
-    
+var base = minTime.val
 
-});
+function start () {
+      timer = d3.timer(function(duration) {
+      // console.log(minTime)
+      document.getElementById("slider11").value = duration * factor + base
+      const $valueSpan = $('.valueSpan');
+      const $value = $('#slider11');
+      $valueSpan.html("Time: " + $value.val() + " nanos");
+      // console.log(duration);
+      d3.selectAll("circle")
+      .attr("r", function(node) { return getRadius(node) })
+      d3.selectAll("line")
+      .attr("stroke-width", getThickness)
+      .attr("stroke", getStrokeColour)
+
+      if (duration * factor + base >= maxTime.val) {
+        console.log("Stopping");
+        timer.stop();
+      }
+  });
+}
+
+function resume () {
+  timer = d3.timer(function(duration) {
+      // console.log(minTime)
+      document.getElementById("slider11").value = duration * factor + base
+      const $valueSpan = $('.valueSpan');
+      const $value = $('#slider11');
+      $valueSpan.html("Time: " + $value.val() + " nanos");
+      // console.log(duration);
+      d3.selectAll("circle")
+      .attr("r", function(node) { return getRadius(node) })
+      d3.selectAll("line")
+      .attr("stroke-width", getThickness)
+      .attr("stroke", getStrokeColour)
+
+      if (duration * factor + base >= maxTime.val) {
+        console.log("Stopping");
+        timer.stop();
+      }
+  });
+}
+
+function myFunction() {
+  timer.stop();
+  const $valueSlider = $('#slider11');
+  base = Number($valueSlider.val())
+}
+
 
 
 function getNeighbors(node) {
@@ -407,7 +446,7 @@ function getTextColor(node, neighbors) {
 }
 
 var width = 1000
-var height = 800
+var height = 600
 
 var svg = d3.select('svg')
 svg.attr('width', width).attr('height', height)

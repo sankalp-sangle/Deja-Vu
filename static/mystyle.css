@@ -63,6 +63,10 @@ div.tooltip {
   pointer-events: none;			
 }
 
+button {
+  background-color: #4CAF50;
+}
+
 * {
   color:  white;
 }
