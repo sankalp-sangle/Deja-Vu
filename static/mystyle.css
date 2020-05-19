@@ -50,6 +50,10 @@ input[type=submit]:hover {
   background-color: #45a049;
 }
 
+#slider11:hover {
+  cursor: pointer;
+}
+
 div.tooltip {	
   position: absolute;			
   text-align: center;			
