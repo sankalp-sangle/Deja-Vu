@@ -341,10 +341,16 @@ function isNeighborLink(node, link) {
   return link.target.id === node.id || link.source.id === node.id
 }
 
+var triggerflag = 0
+
 function getColor(node) {
-       
+    
+    
     const $value = $('#slider11');
     var time = $value.val()
+    if(time > triggerTime.val && node.id == triggerNode.id) {
+      return "blue"
+    }
     // console.log(datass);
     var timeArr = datass[node.label]
     var limiters = limitss[node.label]
