@@ -38,7 +38,7 @@ Flow {{flo.identifier}}
     <!-- </div> -->
 </div>
 <div class = "row">
-  <div class="col-sm-3">
+  <div class="col-sm-3 legend">
     <div style="text-align:center;">
   <form action = "{{url_for('allflows')}}" method="POST">
     <h2 style="color:white">Detected Flows</h2>
@@ -51,8 +51,7 @@ Flow {{flo.identifier}}
     <input type="submit" value="Compare" id="submitButton">
   </form>
 </div>
-</div>
-<div class="col-sm-3 legend">
+
     <h2 style="color:white">Legend</h2>
     <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
 
@@ -81,7 +80,7 @@ Flow {{flo.identifier}}
         background:#000;
     }
     </style>
-<div class="col-sm-6">
+<div class="col-sm-9">
 
 <svg width="960" height="400">
   <text x="300" y="15" fill="orange" font-weight="bold">IP: {{mapIp[flo.identifier]}}</text>
@@ -242,8 +241,8 @@ function getTextColor(node, neighbors) {
   return Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1 ? 'green' : 'black'
 }
 
-var width = 600
-var height = 400
+var width = 900
+var height = 600
 
 var svg = d3.select('svg')
 svg.attr('width', width).attr('height', height)
@@ -299,7 +298,7 @@ var nodeElements = svg.append("g")
   .selectAll("circle")
   .data(nodes)
   .enter().append("circle")
-    .attr("r", 10)
+    .attr("r", 20)
     .attr("fill", getNodeColor)
     .attr("stroke", "black")
     .attr("stroke-width", "1")
@@ -330,7 +329,7 @@ var textElements = svg.append("g")
       .text(function (node) { return  "S" + node.label })
     })
 	  .attr("font-size", 15)
-	  .attr("dx", 15)
+	  .attr("dx", 20)
     .attr("dy", 4)
     // .on('click', gotoSwitch) //my addition
 

@@ -9,14 +9,34 @@
     <h1>Query details!</h1>
 </div>
 
-{{ wtf.quick_form(form) }}
-
+<div class="row">
+    <div class="col-sm-6">
+        {{ wtf.quick_form(form) }}
+    </div>
+    <div class = "col-sm-6">
+        {{ wtf.quick_form(form2) }}
+    </div>
+</div>
 {% if results %}
-    <ul>
-        {% for result in results %}
-            <li> {{result[2]}} </li>
-        {% endfor %}
-    </ul>
 
-{% endif %}
+<table class="table">
+    <thead>
+      <tr>
+        {% for i in range(results[0] | length) %}
+        <th scope="row">{{results[0][i]}}</th>
+        {% endfor %}
+    </thead>
+    <tbody>
+    {% for i in range(results[1:] | length) %}
+    <tr>
+        {% for j in range(results[0] | length) %}
+        <td>{{results[i+1][j]}}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% endif %}
+
 {% endblock %}

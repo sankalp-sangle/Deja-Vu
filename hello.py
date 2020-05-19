@@ -7,7 +7,7 @@ import os, json
 
 from lib.core import (Dashboard, Dashboard_Properties, MySQL_Manager, Panel,
                       QueryBuilder, Target, Time, Grid_Position, Switch, Flow)
-from lib.forms import PacketSearchForm, SampleForm, SimpleButton
+from lib.forms import PacketSearchForm, QueryForm, SimpleButton, RandomQuery
 
 from collections import deque
 from lib.vars import DATABASE, HOST, URL, ANNOTATIONS_URL, DATASOURCE_URL, API_KEY, YEAR_SEC, UNIX_TIME_START_YEAR, headers
@@ -121,13 +121,16 @@ def displaySwitch(switch):
 
 @app.route('/query', methods=['GET', 'POST'])
 def query():
-    form = SampleForm()
+    form = QueryForm()
+    form2 = RandomQuery()
     results = None
-    if form.validate_on_submit():
-        q = QueryBuilder(time_column='time_in', value = form.value.data, metricList=['switch']).get_generic_query() + " LIMIT 10000"
+    if form.submit1.data and form.validate_on_submit():
+        q = QueryBuilder(time_column=form.time.data, value = form.value.data, metricList=form.metric.data.split(",")).get_generic_query() + " LIMIT 10000"
         print(q)
         results = g.mysql_manager.execute_query(q)
-    return render_template('query.html', form=form, results=results)
+    elif form2.submit2.data and form2.validate_on_submit():
+        results = g.mysql_manager.execute_query(form2.query.data)
+    return render_template('query.html', form=form, form2 = form2, results=results)
 
 @app.route('/packetwise', methods=['GET', 'POST'])
 def packetwise():
@@ -373,8 +376,10 @@ def general():
     maxLim2 = {"val":res2[0][0]}
 
     maxDepth = g.mysql_manager.execute_query('select max(queue_depth) from packetrecords')[1:][0][0]
+    triggerTime = g.mysql_manager.execute_query('select time_hit from triggers')[1:][0][0]
+    triggerNode = g.mysql_manager.execute_query('select switch from triggers')[1:][0][0]
 
-    return render_template('general.html', levels = levels, maxD = {"val":(maxDepth * 80) // 1500}, throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    return render_template('general.html', triggerNode = {"id":triggerNode}, triggerTime = {"val":triggerTime}, levels = levels, maxD = {"val":(maxDepth * 80) // 1500}, throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.route('/test/<from_switch>/<to_switch>')
 def test(from_switch, to_switch):
