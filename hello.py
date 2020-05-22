@@ -10,7 +10,7 @@ from lib.core import (Dashboard, Dashboard_Properties, MySQL_Manager, Panel,
 from lib.forms import PacketSearchForm, QueryForm, SimpleButton, RandomQuery
 
 from collections import deque
-from lib.vars import DATABASE, HOST, URL, ANNOTATIONS_URL, DATASOURCE_URL, API_KEY, YEAR_SEC, UNIX_TIME_START_YEAR, headers
+from lib.vars import DATABASE, HOST, URL, ANNOTATIONS_URL, DATASOURCE_URL, API_KEY, YEAR_SEC, UNIX_TIME_START_YEAR, headers, COLORS
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "Gangadhar hi Shaktimaan hai"
@@ -92,15 +92,8 @@ def displaySwitch(switch):
         return render_template('switchinfo.html', points=points, mapIp=mapIp, switch=switchArr[switch], form=form, level = levels[switch])
     elif request.method == "POST":
         if form.validate_on_submit():
-            panelList = []
 
-            panelList.append(Panel(gridPos=Grid_Position(x=0,y=0), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=QueryBuilder(time_column = "time_stamp", value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
-            panelList.append(Panel(gridPos=Grid_Position(x=0,y=11), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=QueryBuilder(time_column = "time_stamp", value= 'ratio*total_pkts', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE, lines = False, bars = True, stack = True, percentage = False))
-            panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Egress Throughput at Switch " + switch, targets = [Target(rawSql=QueryBuilder(value = 'throughput', metricList = ['from_switch','to_switch'], table='egressthroughput', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
-            panelList.append(Panel(gridPos=Grid_Position(x=0,y=33),title="Default Panel: Link Utilization", targets = [Target(rawSql=QueryBuilder(value = 'link_utilization', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
-            panelList.append(Panel(gridPos=Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Target(rawSql=QueryBuilder(value = 'source_ip % 10', metricList = ['source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE, points = True, lines = False))
-            panelList.append(Panel(gridPos=Grid_Position(x=12,y=11),title="Default Panel: Queue Depth", targets = [Target(rawSql=QueryBuilder(value = 'queue_depth', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
-            panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Ingress Throughput at Switch " + switch, targets = [Target(rawSql=QueryBuilder(value = 'throughput', metricList = ['switch', 'source_ip'], table='throughput', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query())], datasource=DATABASE))
+            panelList = getPanels(mysql_manager, switch)
 
             time_from_seconds = g.mysql_manager.execute_query('select min(time_in) from packetrecords where switch = ' + switch)[1][0]
             time_to_seconds = g.mysql_manager.execute_query('select max(time_out) from packetrecords where switch = ' + switch)[1][0]
@@ -446,6 +439,55 @@ def get_ip_addresses():
         for ip in row:
             mapIp[ip] = Int2IP(ip)
     print(mapIp)
+
+def getPanels(mysql_manager, switch):
+    panelList = []
+    colorMap = {}
+
+    indexOfAvailableColour = 0
+    
+    q1 = QueryBuilder(time_column = "time_stamp", value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q1, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=0,y=0), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=q1)], datasource=DATABASE, aliasColors=aliasColors))
+    
+    q2 = QueryBuilder(time_column = "time_stamp", value= 'ratio*total_pkts', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q2, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=0,y=11), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=q2)], datasource=DATABASE, lines = False, bars = True, stack = True, percentage = False, aliasColors=aliasColors))
+
+    q3 = QueryBuilder(value = 'throughput', metricList = ['from_switch','to_switch'], table='egressthroughput', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q3, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Egress Throughput at Switch " + switch, targets = [Target(rawSql=q3)], datasource=DATABASE, aliasColors=aliasColors))
+
+    q4 = QueryBuilder(value = 'link_utilization', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q4, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=0,y=33),title="Default Panel: Link Utilization", targets = [Target(rawSql=q4)], datasource=DATABASE, aliasColors=aliasColors))
+
+    q5 = QueryBuilder(value = 'source_ip % 10', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q5, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Target(rawSql=q5)], datasource=DATABASE, points = True, lines = False, aliasColors=aliasColors))
+    
+    q6 = QueryBuilder(value = 'queue_depth', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q6, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=12,y=11),title="Default Panel: Queue Depth", targets = [Target(rawSql=q6)], datasource=DATABASE, aliasColors=aliasColors))
+
+    q7 = QueryBuilder(value = 'throughput', metricList = ['switch', 'source_ip'], table='throughput', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q7, colorMap, indexOfAvailableColour)
+    panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Ingress Throughput at Switch " + switch, targets = [Target(rawSql=q7)], datasource=DATABASE, aliasColors=aliasColors))
+
+    return panelList
+
+def getAliasColors(mysql_manager, q, colorMap, indexOfAvailableColour):
+    result_set = mysql_manager.execute_query(q)[1:]
+    metricSet = set([row[1] for row in result_set])
+    aliasColors = ""
+    for metric in metricSet:
+        if metric not in colorMap:
+            colorMap[metric] = COLORS[indexOfAvailableColour]
+            indexOfAvailableColour += 1
+            indexOfAvailableColour %= len(COLORS) 
+        aliasColors += '\"' + metric + '\":\"' + colorMap[metric] + '\",'
+    aliasColors = aliasColors[:-1]
+    return aliasColors, indexOfAvailableColour, colorMap
 
 
 if __name__ == "__main__":

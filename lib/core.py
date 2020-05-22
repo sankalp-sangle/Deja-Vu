@@ -130,7 +130,7 @@ class Panel:
     DEFAULT_TITLE = "This is a sample panel title!"
     DEFAULT_PANEL_TYPE = "graph"
 
-    def __init__(self, datasource = None, id = None, title = None, panelType = None, gridPos = None, targets = None, xaxis = None, lines = None, points = None, bars = None, stack = None, percentage = None):
+    def __init__(self, datasource = None, id = None, title = None, panelType = None, gridPos = None, targets = None, xaxis = None, lines = None, points = None, bars = None, stack = None, percentage = None, aliasColors = None):
         if datasource is None:
             datasource = Panel.DEFAULT_DATASOURCE
         if id is None:
@@ -156,6 +156,8 @@ class Panel:
             stack = False
         if percentage is None:
             percentage = False
+        if aliasColors is None:
+            aliasColors = ""
 
         self.datasource = datasource
         self.id = id
@@ -169,6 +171,7 @@ class Panel:
         self.bars = bars
         self.stack = stack
         self.percentage = percentage
+        self.aliasColors = aliasColors
 
     def get_collective_targets_json(self):
         if self.targets is []:
@@ -185,7 +188,7 @@ class Panel:
 
     def get_json_string(self):
         targetJSON = self.get_collective_targets_json()
-        return "\"datasource\": \"{}\",\"id\": {},\"title\": \"{}\",\"type\":\"{}\",\"gridPos\":{}, \"targets\": [{}], \"xaxis\": {}, \"lines\": {}, \"points\": {}, \"bars\": {}, \"stack\": {}, \"percentage\": {}".format(self.datasource, self.id, self.title, self.panelType, "{" + self.gridPos.get_json_string() + "}", targetJSON, "{" + self.xaxis.get_json_string() + "}", "true" if self.lines else "false", "true" if self.points else "false","true" if self.bars else "false","true" if self.stack else "false","true" if self.percentage else "false")
+        return "\"datasource\": \"{}\",\"id\": {},\"title\": \"{}\",\"type\":\"{}\",\"gridPos\":{}, \"targets\": [{}], \"xaxis\": {}, \"lines\": {}, \"points\": {}, \"bars\": {}, \"stack\": {}, \"percentage\": {}, \"aliasColors\": {}".format(self.datasource, self.id, self.title, self.panelType, "{" + self.gridPos.get_json_string() + "}", targetJSON, "{" + self.xaxis.get_json_string() + "}", "true" if self.lines else "false", "true" if self.points else "false","true" if self.bars else "false","true" if self.stack else "false","true" if self.percentage else "false", "{" + self.aliasColors + "}")
 
 class Xaxis:
     def __init__(self, showAxis = None):
