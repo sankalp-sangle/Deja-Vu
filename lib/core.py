@@ -1,6 +1,22 @@
 import mysql.connector
 from mysql.connector import Error
 
+class Scenario:
+    def __init__(self):
+        self.switchArr = {}
+        self.flowArr = {}
+        self.topologyGraph = {}
+        self.switchToLevelMapping = {}
+        self.mapIp = {}
+        self.nodelist = []
+        self.linklist = []
+        self.trigger_switch = None
+        self.min_time = None
+        self.max_time = None
+        self.tor_switches = []
+        self.all_switches = []
+        self.all_flows = []
+
 class Datasource:
     DEFAULT_NAME = "No name given"
     DEFAULT_TYPE = "mysql"

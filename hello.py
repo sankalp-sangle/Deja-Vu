@@ -1,53 +1,34 @@
+import json
+import os
+from collections import deque
+
 import mysql.connector
 import requests
-from flask import Flask, g, redirect, render_template, session, url_for, request
+from flask import (Flask, g, redirect, render_template, request, session,
+                   url_for)
 from flask_bootstrap import Bootstrap
 from mysql.connector import Error
-import os, json
 
-from lib.core import (Dashboard, Dashboard_Properties, MySQL_Manager, Panel,
-                      QueryBuilder, Target, Time, Grid_Position, Switch, Flow)
-from lib.forms import PacketSearchForm, QueryForm, SimpleButton, RandomQuery
+from lib.core import (Dashboard, Dashboard_Properties, Flow, Grid_Position,
+                      MySQL_Manager, Panel, QueryBuilder, Switch, Target, Time, Scenario)
+from lib.forms import PacketSearchForm, QueryForm, RandomQuery, SimpleButton
+from lib.vars import (ANNOTATIONS_URL, API_KEY, COLORS, DATABASE,
+                      DATASOURCE_URL, HOST, UNIX_TIME_START_YEAR, URL,
+                      YEAR_SEC, headers)
 
-from collections import deque
-from lib.vars import DATABASE, HOST, URL, ANNOTATIONS_URL, DATASOURCE_URL, API_KEY, YEAR_SEC, UNIX_TIME_START_YEAR, headers, COLORS
+# Global declarations
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "Gangadhar hi Shaktimaan hai"
 
 bootstrap = Bootstrap(app)
 
-switchArr = {}
-flowArr = {}
-G = {}
-levels = {}
-mapIp = {}
-
-nodelist = []
-linklist = []
+scenario = Scenario()
 
 mysql_manager = MySQL_Manager(database=DATABASE)
-trigger_switch = mysql_manager.execute_query("select switch from triggers")[1:][0][0]
-times = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords")[1:][0]
-min_time = times[0]
-max_time = times[1]
-tor_switches = set( [x[0] for x in mysql_manager.execute_query("select switch from torswitches")[1:] ] )
-all_switches = set( [x[0] for x in mysql_manager.execute_query("select distinct switch from packetrecords")[1:] ] )
-all_flows = set( [x[0] for x in mysql_manager.execute_query("select distinct source_ip from packetrecords")[1:] ] )
 
-for flow in all_flows:
-    flowArr[flow] = Flow(identifier=flow)
-    flowArr[flow].populate_switch_list(mysql_manager)
-    flowArr[flow].populate_ratios(mysql_manager)
+# End of Global declarations
 
-for switch in all_switches:
-    switchArr[switch] = Switch(switch)
-    switchArr[switch].populate_flow_list(mysql_manager)
-    switchArr[switch].populate_ratios(mysql_manager)
-
-
-
-#Global declarations
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -61,35 +42,33 @@ def internal_server_error(e):
 
 @app.route('/')
 def index():
-    return render_template('index.html', switch=trigger_switch, duration=(max_time-min_time) / 10**9)
+    return render_template('index.html', switch=scenario.trigger_switch, duration=(scenario.max_time-scenario.min_time) / 10**9)
 
 @app.route('/switches')
 def switches():
     lvlToSwitch = {}
-    for key in levels:
-        if levels[key] in lvlToSwitch:
-            lvlToSwitch[levels[key]].append(key)
+    for key in scenario.switchToLevelMapping:
+        if scenario.switchToLevelMapping[key] in lvlToSwitch:
+            lvlToSwitch[scenario.switchToLevelMapping[key]].append(key)
         else:
-            lvlToSwitch[levels[key]] = [key]
+            lvlToSwitch[scenario.switchToLevelMapping[key]] = [key]
 
-    other_switches = all_switches - tor_switches
-    return render_template('switches.html', lvlToSwitch = lvlToSwitch, tor_switches=sorted(list(tor_switches)), other_switches=sorted(list(other_switches)) , trigger_switch = trigger_switch)
+    other_switches = scenario.all_switches - scenario.tor_switches
+    return render_template('switches.html', lvlToSwitch = lvlToSwitch, tor_switches=sorted(list(scenario.tor_switches)), other_switches=sorted(list(other_switches)) , trigger_switch = scenario.trigger_switch)
 
 @app.route('/switches/<switch>', methods=['GET', 'POST'])
 def displaySwitch(switch):
     form = SimpleButton()
-    # print(Swich.flowList)
-
 
     points = []
-    for flow in switchArr[switch].flowList:
+    for flow in scenario.switchArr[switch].flowList:
         entry = {}
-        entry['SourceIP'] = mapIp[flow]
-        entry['Ratio'] = switchArr[switch].ratios[flow]
+        entry['SourceIP'] = scenario.mapIp[flow]
+        entry['Ratio'] = scenario.switchArr[switch].ratios[flow]
         points.append(entry)
 
     if request.method == "GET":
-        return render_template('switchinfo.html', points=points, mapIp=mapIp, switch=switchArr[switch], form=form, level = levels[switch])
+        return render_template('switchinfo.html', points=points, mapIp=scenario.mapIp, switch=scenario.switchArr[switch], form=form, level = scenario.switchToLevelMapping[switch])
     elif request.method == "POST":
         if form.validate_on_submit():
 
@@ -107,10 +86,9 @@ def displaySwitch(switch):
             dashboard = Dashboard(properties=Dashboard_Properties(title="Switch " + switch ,time=Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
             
             payload = get_final_payload(dashboard)
-            # print("\nPayload:\n" + payload)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
             dashboardId = response.json()['uid']
-            return render_template('switchinfo.html', points = points, mapIp=mapIp, switch=switchArr[switch], form = form, dashboardID=dashboardId, level = levels[switch])
+            return render_template('switchinfo.html', points = points, mapIp=scenario.mapIp, switch=scenario.switchArr[switch], form = form, dashboardID=dashboardId, level = scenario.switchToLevelMapping[switch])
 
 @app.route('/query', methods=['GET', 'POST'])
 def query():
@@ -119,7 +97,6 @@ def query():
     results = None
     if form.submit1.data and form.validate_on_submit():
         q = QueryBuilder(time_column=form.time.data, value = form.value.data, metricList=form.metric.data.split(",")).get_generic_query() + " LIMIT 10000"
-        print(q)
         results = g.mysql_manager.execute_query(q)
     elif form2.submit2.data and form2.validate_on_submit():
         results = g.mysql_manager.execute_query(form2.query.data)
@@ -137,7 +114,6 @@ def packetwise():
     
     elif request.method == "POST":
         if form.validate_on_submit():
-            print("Here")
             q = "select time_in, switch from packetrecords where hash = " + form.hash.data + " order by time_in"
             results = g.mysql_manager.execute_query(q)
             results = results[1:]
@@ -145,7 +121,6 @@ def packetwise():
             session['results'] = results
             return render_template('packetwise.html', form=form, form2=form2, results=results)
         elif form2.validate_on_submit():
-            print("here2")
             hash = form.hash.data
             
             time_from_seconds = g.mysql_manager.execute_query('select min(time_in) from packetrecords where hash = ' + session.get('hash'))[1][0]
@@ -164,30 +139,27 @@ def packetwise():
 
             dashboard = Dashboard(properties=Dashboard_Properties(title="Packet " + hash ,time=Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
             payload = get_final_payload(dashboard)
-            # print("\nPayload:\n" + payload)
+
             response = requests.request("POST", url=URL, headers=headers, data = payload)
 
             dashboardId = response.json()['uid']
     
             return render_template('packetwise.html', form=PacketSearchForm(), form2=form2, results = session.get('results'), dashboardId=dashboardId)
-        else:
-            print("Here3")
     
 
 @app.route('/flows/<flow>')
 def displayFlow(flow):
-    # print(flow)
+
     if "." in flow:
         flow = str(IP2Int(flow))
-        print(flow)
     res = g.mysql_manager.execute_query("select distinct source_ip from packetrecords")[1:]
     choices = [row[0] for row in res]
     lvlToSwitch = {}
-    for switch in flowArr[int(flow)].switchList:
-        if levels[switch] in lvlToSwitch:
-            lvlToSwitch[levels[switch]].append(switch)
+    for switch in scenario.flowArr[int(flow)].switchList:
+        if scenario.switchToLevelMapping[switch] in lvlToSwitch:
+            lvlToSwitch[scenario.switchToLevelMapping[switch]].append(switch)
         else:
-            lvlToSwitch[levels[switch]] = [switch]
+            lvlToSwitch[scenario.switchToLevelMapping[switch]] = [switch]
     res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ flow + "\' group by switch")[1:]
     time_in_list = [int(row[1]) for row in res]
 
@@ -200,12 +172,12 @@ def displayFlow(flow):
     times={}
     for row in res:
         times[row[0]] = int(row[1])
-    # print("Times" + str(times))
-    return render_template('flowinfo.html', mapIp=mapIp, flo = flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
+
+    return render_template('flowinfo.html', mapIp=scenario.mapIp, flo = scenario.flowArr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=scenario.nodelist, linklist=scenario.linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
 
 @app.route('/flows')
 def flows():
-    return render_template('flows.html', mapIp=mapIp, flows = flowArr, switches = switchArr, trigger_switch=trigger_switch)
+    return render_template('flows.html', mapIp=scenario.mapIp, flows = scenario.flowArr, switches = scenario.switchArr, trigger_switch=scenario.trigger_switch)
 
 @app.route('/grafana')
 def grafana():
@@ -223,7 +195,7 @@ def allflows():
     largestTime = 0
 
     for flow in requestedFlows:
-        res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ str(flowArr[flow].identifier) + "\' group by switch")[1:]
+        res = g.mysql_manager.execute_query("select switch, min(time_in) from packetrecords where source_ip=\'"+ str(scenario.flowArr[flow].identifier) + "\' group by switch")[1:]
         timmes = {}
         for row in res:
             timmes[row[0]] = int(row[1])
@@ -240,7 +212,7 @@ def allflows():
     maxLim2 = {"val":largestTime + 0.1 * interval}
 
 
-    return render_template('allflows.html', mapIp = mapIp, flowIPS=requestedFlows, noOfFlows=len(requestedFlows), noOfFlowsJS = {"val":len(requestedFlows)}, nodelist=nodelist, linklist=linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    return render_template('allflows.html', mapIp = scenario.mapIp, flowIPS=requestedFlows, noOfFlows=len(requestedFlows), noOfFlowsJS = {"val":len(requestedFlows)}, nodelist=scenario.nodelist, linklist=scenario.linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.before_request
 def before_request():
@@ -253,63 +225,15 @@ def teardown_request(exception):
   if db is not None:
     db.close()
 
-# @app.before_first_request
-# def initialize():
-#     mysql_manager = MySQL_Manager(database=DATABASE)
-#     g.trigger_switch = mysql_manager.execute_query("select switch from triggers")[1:][0][0]
-#     g.times = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords")[1:][0]
-#     g.min_time = g.times[0]
-#     g.max_time = g.times[1]
-
-def get_final_payload(dashboard):
-    payload = "{ \"dashboard\": {" + dashboard.get_json_string() + "}, \"overwrite\": true}"
-    return payload
-
-def get_formatted_time(year):
-    return "{}-{}-{}".format(year, "01", "01")
-
-def generateGraph():
-    links = mysql_manager.execute_query("select * from links")[1:]
-    for link in links:
-        u, v, cap = link[0], link[1], link[2]
-        if u in G:
-            G[u].append([v, cap])
-        else:
-            G[u] = []
-            G[u].append([v, cap])
-
-def getLevels():
-    for tor in tor_switches:
-        visited = []
-        bfs(visited, deque([[tor, 1]]))
-        # print(levels)
-        
-def bfs(visited, queue):
-    if len(queue) == 0:
-        return
-    
-    node = queue.popleft()
-    if node[0] in levels:
-        levels[node[0]] = min(levels[node[0]], node[1])
-    else:
-        levels[node[0]] = node[1]
-    for adj in G[node[0]]:
-        if adj[0] not in visited:
-            visited.append(adj[0])
-            queue.append([adj[0], node[1] + 1])
-    
-    bfs(visited, queue)
-
 @app.route('/topo')
 def topo():
-    return render_template("topology.html", nodelist = nodelist, linklist = linklist, trigger_switch = trigger_switch)
+    return render_template("topology.html", nodelist = scenario.nodelist, linklist = scenario.linklist, trigger_switch = scenario.trigger_switch)
 
 @app.route('/general')
 def general():
 
     throughputlimits = {}
     res3 = g.mysql_manager.execute_query('select from_switch, to_switch, min(time_out), max(time_out) from egressthroughput group by 1,2')[1:]
-    print(res3)
     for row in res3:
         entry = {}
         entry['min'] = row[2]
@@ -351,7 +275,6 @@ def general():
 
     limits = {}
     res3 = g.mysql_manager.execute_query('select switch, min(time_out), max(time_out) from packetrecords group by switch')[1:]
-    print(res3)
     for row in res3:
         entry = {}
         entry['min'] = row[1]
@@ -372,7 +295,7 @@ def general():
     triggerTime = g.mysql_manager.execute_query('select time_hit from triggers')[1:][0][0]
     triggerNode = g.mysql_manager.execute_query('select switch from triggers')[1:][0][0]
 
-    return render_template('general.html', triggerNode = {"id":triggerNode}, triggerTime = {"val":triggerTime}, levels = levels, maxD = {"val":(maxDepth * 80) // 1500}, throughputlimits=throughputlimits, nodelist=nodelist, throughput = throughput, linklist=linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
+    return render_template('general.html', triggerNode = {"id":triggerNode}, triggerTime = {"val":triggerTime}, levels = scenario.switchToLevelMapping, maxD = {"val":(maxDepth * 80) // 1500}, throughputlimits=throughputlimits, nodelist=scenario.nodelist, throughput = throughput, linklist=scenario.linklist, limits = limits, datas=datas, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2)
 
 @app.route('/test/<from_switch>/<to_switch>')
 def test(from_switch, to_switch):
@@ -380,35 +303,72 @@ def test(from_switch, to_switch):
     datas = []
     entry = {}
     inner = {}
-    # entry['date'] = 'date'
-    # entry['value'] = 'value'
+
     for i,row in enumerate(res):
-        datas.append({'date':row[0], 'value':str(row[1])})
-    # datas.append({'date':2, 'value':5})
-    # datas.append({'date':3, 'value':6})
-    # datas.append({'date':4, 'value':7})
-        
+        datas.append({'date':row[0], 'value':str(row[1])})    
 
     return render_template('test.html', data=datas)
 
-def printJson():
+def get_final_payload(dashboard):
+    payload = "{ \"dashboard\": {" + dashboard.get_json_string() + "}, \"overwrite\": true}"
+    return payload
+
+def get_formatted_time(year):
+    return "{}-{}-{}".format(year, "01", "01")
+
+def generate_topology_graph():
+    global scenario
+
+    links = mysql_manager.execute_query("select * from links")[1:]
+    for link in links:
+        u, v, cap = link[0], link[1], link[2]
+        if u in scenario.topologyGraph:
+            scenario.topologyGraph[u].append([v, cap])
+        else:
+            scenario.topologyGraph[u] = []
+            scenario.topologyGraph[u].append([v, cap])
+
+def get_switch_to_level_mapping():
+    global scenario
+    for tor in scenario.tor_switches:
+        visited = []
+        bfs(visited, deque([[tor, 1]]))
+        
+def bfs(visited, queue):
+    global scenario
+    if len(queue) == 0:
+        return
     
+    node = queue.popleft()
+    if node[0] in scenario.switchToLevelMapping:
+        scenario.switchToLevelMapping[node[0]] = min(scenario.switchToLevelMapping[node[0]], node[1])
+    else:
+        scenario.switchToLevelMapping[node[0]] = node[1]
+    for adj in scenario.topologyGraph[node[0]]:
+        if adj[0] not in visited:
+            visited.append(adj[0])
+            queue.append([adj[0], node[1] + 1])
+    
+    bfs(visited, queue)
+
+def get_topology_positions():
+    global scenario
     BEGINX = 20
     BEGINY = 70
-    added = {}
-    for node in levels:
-        added[levels[node]] = []
+    nodesAddedToLevel = {}
+    for node in scenario.switchToLevelMapping:
+        nodesAddedToLevel[scenario.switchToLevelMapping[node]] = []
 
-    for node in G:
+    for node in scenario.topologyGraph:
         nodeEntry = {}
         nodeEntry["id"] = node
         nodeEntry["group"] = "switch"
         nodeEntry["label"] = node
-        nodeEntry["level"] = levels[node]
-        added[levels[node]].append(node)
-        nodeEntry["x"] = BEGINX + 200 * len(added[levels[node]])
-        nodeEntry["y"] = BEGINY + (3-levels[node]) * 200
-        nodelist.append(nodeEntry)
+        nodeEntry["level"] = scenario.switchToLevelMapping[node]
+        nodesAddedToLevel[scenario.switchToLevelMapping[node]].append(node)
+        nodeEntry["x"] = BEGINX + 200 * len(nodesAddedToLevel[scenario.switchToLevelMapping[node]])
+        nodeEntry["y"] = BEGINY + (3-scenario.switchToLevelMapping[node]) * 200
+        scenario.nodelist.append(nodeEntry)
     
     links = mysql_manager.execute_query("select * from links")[1:]
 
@@ -417,7 +377,7 @@ def printJson():
         linkEntry["source"] = link[0]
         linkEntry["target"] = link[1]
         linkEntry["strength"] = 0.7
-        linklist.append(linkEntry)
+        scenario.linklist.append(linkEntry)
 
 def Int2IP(ipnum):
     o1 = int(ipnum / pow(2,24)) % 256
@@ -432,13 +392,12 @@ def IP2Int(ip):
     return res
 
 def get_ip_addresses():
-    print("Generating IP map...")
+    global scenario
     result = mysql_manager.execute_query('select distinct source_ip from packetrecords')
 
     for row in result[1:]:
         for ip in row:
-            mapIp[ip] = Int2IP(ip)
-    print(mapIp)
+            scenario.mapIp[ip] = Int2IP(ip)
 
 def getPanels(mysql_manager, switch):
     panelList = []
@@ -489,13 +448,35 @@ def getAliasColors(mysql_manager, q, colorMap, indexOfAvailableColour):
     aliasColors = aliasColors[:-1]
     return aliasColors, indexOfAvailableColour, colorMap
 
+def generate_scenario_data():
+    global scenario
+
+    scenario.trigger_switch = mysql_manager.execute_query("select switch from triggers")[1:][0][0]
+    times = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords")[1:][0]
+    scenario.min_time = times[0]
+    scenario.max_time = times[1]
+    scenario.tor_switches = set( [x[0] for x in mysql_manager.execute_query("select switch from torswitches")[1:] ] )
+    scenario.all_switches = set( [x[0] for x in mysql_manager.execute_query("select distinct switch from packetrecords")[1:] ] )
+    scenario.all_flows = set( [x[0] for x in mysql_manager.execute_query("select distinct source_ip from packetrecords")[1:] ] )
+
+    for flow in scenario.all_flows:
+        scenario.flowArr[flow] = Flow(identifier=flow)
+        scenario.flowArr[flow].populate_switch_list(mysql_manager)
+        scenario.flowArr[flow].populate_ratios(mysql_manager)
+
+    for switch in scenario.all_switches:
+        scenario.switchArr[switch] = Switch(switch)
+        scenario.switchArr[switch].populate_flow_list(mysql_manager)
+        scenario.switchArr[switch].populate_ratios(mysql_manager)
+
+
 
 if __name__ == "__main__":
 
-    generateGraph()
-    getLevels()
+    generate_scenario_data()
+    generate_topology_graph()
+    get_switch_to_level_mapping()
     get_ip_addresses()
+    get_topology_positions()
 
-    printJson()
-    os.system('say "READY"')
     app.run(debug=True)
