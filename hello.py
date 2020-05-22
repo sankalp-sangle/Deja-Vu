@@ -93,7 +93,7 @@ def displaySwitch(switch):
     elif request.method == "POST":
         if form.validate_on_submit():
 
-            panelList = getPanels(mysql_manager, switch)
+            panelList = getPanels(g.mysql_manager, switch)
 
             time_from_seconds = g.mysql_manager.execute_query('select min(time_in) from packetrecords where switch = ' + switch)[1][0]
             time_to_seconds = g.mysql_manager.execute_query('select max(time_out) from packetrecords where switch = ' + switch)[1][0]
