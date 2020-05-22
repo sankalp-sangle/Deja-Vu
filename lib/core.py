@@ -461,7 +461,7 @@ class QueryBuilder:
         metricComponent = metricComponent[:-5] #Remove the last comma and space
         metricComponent += ")"
         
-        return "select {} as \'time\', {} as metric, {} FROM {} {} {} ORDER BY {}".format(timeComponent, metricComponent, valueComponent, tableComponent, whereComponent, groupByComponent, timeComponent)
+        return "select {} as \'time\', {} as metric, {} FROM {} {} {} ORDER BY {}".format("from_unixtime(" + timeComponent + ")", metricComponent, valueComponent, tableComponent, whereComponent, groupByComponent, timeComponent)
 
 
 if __name__ == "__main__":
