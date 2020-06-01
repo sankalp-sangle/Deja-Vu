@@ -3,10 +3,10 @@ from mysql.connector import Error
 
 class Scenario:
     def __init__(self):
-        self.switchArr = {}
-        self.flowArr = {}
+        self.switch_arr = {}
+        self.flow_arr = {}
         self.topologyGraph = {}
-        self.switchToLevelMapping = {}
+        self.switch_to_level_mapping = {}
         self.mapIp = {}
         self.nodelist = []
         self.linklist = []
