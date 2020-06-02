@@ -1,13 +1,44 @@
 import mysql.connector
 from mysql.connector import Error
 
+'''
+Note: For classes prefixed with "Grafana", each class represents a
+component in the JSON model for a Grafana Dashboard. Every such class
+takes specifications for its JSON properties through parameters and
+generates the JSON string using the get_json_string method.
+
+Dashboards in Grafana are specified using a JSON string.
+For more information on the JSON model for Grafana dashboards, refer:
+https://grafana.com/docs/grafana/latest/reference/dashboard/
+'''
+
+
 class Scenario:
+    '''
+    A class to store information regarding the trace/scenario loaded into
+    MySQL for visualization.
+    Properties:
+    switch_arr     : Dictionary, key -> switch ID : str, value -> Object of Switch class
+    flow_arr       : Dictionary, key -> flow source ip : int, value -> Object of Flow class
+    topology_graph : Dictionary, key -> switch ID : str, value -> neibhbouring switch IDs : List
+    switch_to_level_mapping : Dictionary, key -> switch ID : str, value -> level of the switch : int
+    map_ip : Dictionary, key -> flow source ip : int, value -> human readable source ip : str
+    nodelist : Pending
+    linklist : Pending
+    trigger_switch : switch ID of switch that generated the trigger : str
+    min_time : earliest time of recording of any p record across all switches : int
+    max_time : latest time of recording of any p record across all switches : int
+    tor_switches : list of switch IDs representing all Top of Rack switches : list
+    all_switches : list of switch IDs of all switches : list
+    all_flows : list of source IPs of all flows : list
+    '''
+    
     def __init__(self):
         self.switch_arr = {}
         self.flow_arr = {}
-        self.topologyGraph = {}
+        self.topology_graph = {}
         self.switch_to_level_mapping = {}
-        self.mapIp = {}
+        self.map_ip = {}
         self.nodelist = []
         self.linklist = []
         self.trigger_switch = None
@@ -18,6 +49,10 @@ class Scenario:
         self.all_flows = []
 
 class Grafana_Datasource:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
     DEFAULT_NAME = "No name given"
     DEFAULT_TYPE = "mysql"
     DEFAULT_DATABASE = "No name given to database"
@@ -48,6 +83,10 @@ class Grafana_Datasource:
 
         
 class Grafana_Dashboard:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
     def __init__(self, panels = None, properties = None):
         if properties is None:
             properties = Grafana_Dashboard_Properties()
@@ -76,6 +115,10 @@ class Grafana_Dashboard:
         return panelJSON
 
 class Grafana_Dashboard_Properties:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
     ANNOTATION_JSON = '''\"annotations\": {
         \"list\": [
         {
@@ -117,6 +160,10 @@ class Grafana_Dashboard_Properties:
         return "{}, \"id\": {},\"uid\": {},\"title\": \"{}\",\"timezone\": \"{}\",\"schemaVersion\": {},\"version\": {},\"time\":{}".format(Grafana_Dashboard_Properties.ANNOTATION_JSON, self.id, self.uid, self.title, self.timezone, self.schemaVersion, self.version, "{" + self.time.get_json_string() + "}")
 
 class Grafana_Grid_Position:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
     
     DEFAULT_HEIGHT = 11
     DEFAULT_WIDTH = 12
@@ -140,6 +187,10 @@ class Grafana_Grid_Position:
         return "\"h\": {}, \"w\": {}, \"x\": {}, \"y\": {}".format(self.height, self.width, self.x, self.y) 
 
 class Grafana_Panel:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
 
     GLOBAL_ID = 1
     DEFAULT_DATASOURCE = "MySQL"
@@ -207,6 +258,10 @@ class Grafana_Panel:
         return "\"datasource\": \"{}\",\"id\": {},\"title\": \"{}\",\"type\":\"{}\",\"gridPos\":{}, \"targets\": [{}], \"xaxis\": {}, \"lines\": {}, \"points\": {}, \"bars\": {}, \"stack\": {}, \"percentage\": {}, \"aliasColors\": {}".format(self.datasource, self.id, self.title, self.panelType, "{" + self.gridPos.get_json_string() + "}", targetJSON, "{" + self.xaxis.get_json_string() + "}", "true" if self.lines else "false", "true" if self.points else "false","true" if self.bars else "false","true" if self.stack else "false","true" if self.percentage else "false", "{" + self.aliasColors + "}")
 
 class Grafana_Xaxis:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
     def __init__(self, showAxis = None):
         if showAxis is None:
             showAxis = False
@@ -217,6 +272,10 @@ class Grafana_Xaxis:
         return "\"show\": {}".format("true" if self.showAxis else "false")
 
 class Grafana_Target:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
 
     DEFAULT_FORMAT = "time_series"
     DEFAULT_RAW_SQL = ""
@@ -241,6 +300,10 @@ class Grafana_Target:
         return "\"format\": \"{}\",\"rawQuery\": {},\"rawSql\": \"{}\",\"refId\": \"{}\"".format(self.format, "true" if self.rawQuery else "false", self.rawSql, self.refId)
 
 class Grafana_Time:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
 
     @staticmethod
     def convert_to_standard_format(timeFormat, requiresConversion):
@@ -271,6 +334,10 @@ class Grafana_Time:
         return "\"from\": {},\"to\": {}".format(self.timeFrom, self.timeTo)
 
 class MySQL_Manager:
+    '''
+    Purpose: A class to help communicate with the MySQL instance
+    and execute queries.
+    '''
 
     DEFAULT_HOST = 'localhost'
     DEFAULT_DATABASE = 'netplay'
@@ -302,6 +369,13 @@ class MySQL_Manager:
             print("Error while connecting to MySQL", e)
     
     def execute_query(self, query):
+        '''
+        Parameters:
+        query : str
+
+        Executes query on MySQL instance and returns the result set
+        as a collection of rows if there is a result returned.
+        '''
         cursor = self.connector.cursor()
         try:
             cursor.execute(query)
@@ -309,6 +383,9 @@ class MySQL_Manager:
             print("Failed to execute query", e)
             return []
         finally:
+            # If result is returned, return the result set.
+            # Else, commit the database (needed for update / delete)
+            # queries.
             if cursor.with_rows:
                 fields = [row[0] for row in cursor.description]
                 resultset = cursor.fetchall()
@@ -317,22 +394,41 @@ class MySQL_Manager:
         self.connector.commit()
 
 class Switch:
-
+    '''
+    A class to model a switch.
+    Properties:
+    identifier : the ID of the switch : str
+    flow_list : list of source ips of all flows going through this switch : list
+    ratios : Dictionary, key -> source ip of flow : int, value : ratio of packets 
+    of that flow passing through switch to total packets passing through switch : float
+    '''
     def __init__(self, identifier = None):
         if identifier is None:
             identifier = 'No switch identifier'
         
         self.identifier = identifier
-        self.flowList = []
+        self.flow_list = []
         self.ratios = {}
 
-    def populate_flow_list(self, my_sql_manager):
+    def populateFlowList(self, my_sql_manager):
+        '''
+        Parameters: mysql_manager : Object of type MySQL_Manager class
+        
+        Purpose: Collects source ips of flows passing through switch and
+        populates the flow_list attribute.
+        '''
         if my_sql_manager is not None:
             result = my_sql_manager.execute_query('select distinct source_ip from packetrecords where switch = \'' + self.identifier + '\'')
             for row in result[1:]:
-                self.flowList.append(row[0])
+                self.flow_list.append(row[0])
 
-    def populate_ratios(self, mysql_manager):
+    def populateRatios(self, mysql_manager):
+        '''
+        Parameters: mysql_manager : Object of type MySQL_Manager class
+        
+        Purpose: Calculates ratio for each source ip and populates
+        ratios attribute.
+        '''
         if mysql_manager is not None:
             result = mysql_manager.execute_query('select source_ip, count(hash) from packetrecords where switch =\'' + self.identifier + '\' group by source_ip')
             total_pkts = sum([row[1] for row in result[1:]])
@@ -340,23 +436,15 @@ class Switch:
             for row in result[1:]:
                 self.ratios[row[0]] = row[1]/total_pkts
 
-    def get_packet_count_from_switch(self, mysql_manager):
-        answer = mysql_manager.execute_query('select source_ip, count(hash) from packetrecords where switch=\'' + self.identifier + '\'' + ' group by switch, source_ip')
-        return answer[1:]
-    
-    def get_packet_count_from_switch_boundaries(self, mysql_manager):
-        HALF_WIDTH = 10000000 # 1 Micro
-
-        trigger_time = mysql_manager.execute_query('select time_hit from triggers')[1][0]
-        # print(str(trigger_time))
-        answer = mysql_manager.execute_query('select source_ip, count(hash) from packetrecords where switch in (select distinct switch from triggers) and time_in between ' + str(trigger_time - HALF_WIDTH) + ' and ' + str(trigger_time + HALF_WIDTH) + ' group by switch, source_ip')
-        return answer
-
     def print_info(self, mapIp):
+        '''
+        Purpose: prints information about switch object
+        '''
+
         print("Switch Identifier: S" + str(self.identifier))
 
         print("Flows passed:", end="")
-        for flow in self.flowList:
+        for flow in self.flow_list:
             print(mapIp[flow] if flow in mapIp else flow, end=" ")
         print("\nRatios:")
         for flow in self.ratios:
@@ -364,24 +452,44 @@ class Switch:
         print("\n")
 
 class Flow:
-    
+    '''
+    A class to model a flow.
+    Properties:
+    identifier : the source ip of the flow : int
+    switch_list : list of IDs of all switches visited by this flow : list
+    ratios : Dictionary, key -> ID of switch : str, value : ratio of packets 
+    of that flow passing through switch to total packets passing through switch : float
+    '''
+
     def __init__(self, identifier = None):
         if identifier is None:
             identifier = 0
         
         self.identifier = identifier
-        self.switchList = []
+        self.switch_list = []
         self.ratios = {}
     
-    def populate_switch_list(self, mysql_manager):
+    def populateSwitchList(self, mysql_manager):
+        '''
+        Parameters: mysql_manager : Object of type MySQL_Manager class
+
+        Purpose: Collects switch IDs of switches visited by the flow and
+        populates the switch_list attribute.
+        '''
         if mysql_manager is not None:
             result = mysql_manager.execute_query('select distinct switch from packetrecords where source_ip = ' + str(self.identifier))
             for row in result[1:]:
-                self.switchList.append(row[0])
+                self.switch_list.append(row[0])
     
-    def populate_ratios(self, mysql_manager):
+    def populateRatios(self, mysql_manager):
+        '''
+        Parameters: mysql_manager : Object of type MySQL_Manager class
+        
+        Purpose: Calculates ratio of the flow in each switch it has visited
+        and populates ratios attribute.
+        '''
         if mysql_manager is not None:
-            for switch in self.switchList:
+            for switch in self.switch_list:
                 result = mysql_manager.execute_query('select count(hash) from packetrecords where switch =\'' + switch + '\'')
                 total_pkts = result[1][0]
                 
@@ -389,10 +497,14 @@ class Flow:
                 self.ratios[switch] = result[1][0] / total_pkts
 
     def print_info(self, mapIp):
+        '''
+        Purpose: prints information about flow object
+        '''
+
         print("Flow Identifier:" + ( str( mapIp[self.identifier] if self.identifier in mapIp else self.identifier ) ))
 
         print("Switches encountered:", end="")
-        for switch in self.switchList:
+        for switch in self.switch_list:
             print(switch, end=" ")
         
         print("\nRatios:")
@@ -402,7 +514,13 @@ class Flow:
         print("\n")
 
 class QueryBuilder:
-
+    '''
+    A class to generate SQL query for Grafana based on certain
+    parameters as specified during object creation.
+    For details on querying Grafana using SQL, refer to below link:
+    https://grafana.com/docs/grafana/latest/features/datasources/mysql/
+    '''
+    
     DEFAULT_TABLE = "packetrecords"
     DEFAULT_TIME_COLUMN = "time_in"
 
@@ -432,9 +550,18 @@ class QueryBuilder:
         self.table = table
         
     def get_formatted_time(self, year):
+        '''
+        Parameters: year : str
+        Returns a string in the format accepted by Grafana
+        '''
+        
         return "{}-{}-{}".format(year, "01", "01")
 
     def get_generic_query(self):
+        '''
+        Returns an SQL query according to specified paramers
+        '''
+
         timeComponent = ""
         whereComponent = ""
         valueComponent = ""
@@ -462,11 +589,5 @@ class QueryBuilder:
         metricComponent += ")"
         
         return "select {} as \'time\', {} as metric, {} FROM {} {} {} ORDER BY {}".format("from_unixtime(" + timeComponent + ")", metricComponent, valueComponent, tableComponent, whereComponent, groupByComponent, timeComponent)
-
-
-if __name__ == "__main__":
-    dsource = Grafana_Datasource(name="My Datasource", database_type="mysql", database="microburst_incast_sync1", user="sankalp")
-    print(dsource.get_json_string())
-
 
         

@@ -636,9 +636,6 @@ var linkElements = svg.append("g")
             div.transition()		
                 .duration(10)		
                 .style("opacity", 0);	
-        })
-        .on("click", function(line) {
-          location.href = "http://localhost:5000/test/" + line.source.id + "/" + line.target.id
         });
 
 var nodeElements = svg.append("g")

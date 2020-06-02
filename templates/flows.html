@@ -9,7 +9,7 @@
     {% endif %}</h3>
         Here are the flows:
         <ul>
-            {% for flow in switches[switch].flowList  %}
+            {% for flow in switches[switch].flow_list  %}
                 <li><a href={{url_for('displayFlow', flow=flow)}}>{{mapIp[flow]}}</a></li>
             {% endfor %}
         </ul>

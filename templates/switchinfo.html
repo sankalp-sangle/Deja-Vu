@@ -23,7 +23,7 @@ Switch {{switch.identifier}}
 <h5>
     Flows:
     <ul>
-        {% for flow in switch.flowList %}
+        {% for flow in switch.flow_list %}
             <li> <a href={{ url_for('displayFlow', flow=flow)}}>{{mapIp[flow]}}</a>, Ratio : {{switch.ratios[flow]}}</li>
         {% endfor %}
     </ul>
