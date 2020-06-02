@@ -40,3 +40,6 @@ nosetests.xml
 .vscode
 # Virtual environment
 venv
+
+# VSCode workspace
+kaam.code-workspace

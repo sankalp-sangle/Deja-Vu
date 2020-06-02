@@ -17,7 +17,7 @@ class Scenario:
         self.all_switches = []
         self.all_flows = []
 
-class Datasource:
+class Grafana_Datasource:
     DEFAULT_NAME = "No name given"
     DEFAULT_TYPE = "mysql"
     DEFAULT_DATABASE = "No name given to database"
@@ -26,15 +26,15 @@ class Datasource:
         
     def __init__(self, name = None, database_type = None, database = None, user = None, password = None):
         if name is None:
-            name = Datasource.DEFAULT_NAME
+            name = Grafana_Datasource.DEFAULT_NAME
         if database_type is None:
-            database_type = Datasource.DEFAULT_TYPE
+            database_type = Grafana_Datasource.DEFAULT_TYPE
         if database is None:
-            database = Datasource.DEFAULT_DATABASE
+            database = Grafana_Datasource.DEFAULT_DATABASE
         if user is None:
-            user = Datasource.DEFAULT_USER
+            user = Grafana_Datasource.DEFAULT_USER
         if password is None:
-            password = Datasource.DEFAULT_PASSWORD
+            password = Grafana_Datasource.DEFAULT_PASSWORD
 
         self.name = name
         self.database_type = database_type
@@ -47,12 +47,12 @@ class Datasource:
         
 
         
-class Dashboard:
+class Grafana_Dashboard:
     def __init__(self, panels = None, properties = None):
         if properties is None:
-            properties = Dashboard_Properties()
+            properties = Grafana_Dashboard_Properties()
         if panels is None:
-            panels = [Panel(title="Sample Panel")]
+            panels = [Grafana_Panel(title="Sample Panel")]
 
         self.properties          = properties
         self.panels              = panels
@@ -75,7 +75,7 @@ class Dashboard:
         
         return panelJSON
 
-class Dashboard_Properties:
+class Grafana_Dashboard_Properties:
     ANNOTATION_JSON = '''\"annotations\": {
         \"list\": [
         {
@@ -102,7 +102,7 @@ class Dashboard_Properties:
         if version is None:
             version = "0"
         if time is None:
-            time = Time()
+            time = Grafana_Time()
             
         self.id = id
         self.uid = uid
@@ -114,9 +114,9 @@ class Dashboard_Properties:
         self.time = time
 
     def get_json_string(self):
-        return "{}, \"id\": {},\"uid\": {},\"title\": \"{}\",\"timezone\": \"{}\",\"schemaVersion\": {},\"version\": {},\"time\":{}".format(Dashboard_Properties.ANNOTATION_JSON, self.id, self.uid, self.title, self.timezone, self.schemaVersion, self.version, "{" + self.time.get_json_string() + "}")
+        return "{}, \"id\": {},\"uid\": {},\"title\": \"{}\",\"timezone\": \"{}\",\"schemaVersion\": {},\"version\": {},\"time\":{}".format(Grafana_Dashboard_Properties.ANNOTATION_JSON, self.id, self.uid, self.title, self.timezone, self.schemaVersion, self.version, "{" + self.time.get_json_string() + "}")
 
-class Grid_Position:
+class Grafana_Grid_Position:
     
     DEFAULT_HEIGHT = 11
     DEFAULT_WIDTH = 12
@@ -127,9 +127,9 @@ class Grid_Position:
         if y is None:
             y = 0
         if height is None:
-            height = Grid_Position.DEFAULT_HEIGHT
+            height = Grafana_Grid_Position.DEFAULT_HEIGHT
         if width is None:
-            width = Grid_Position.DEFAULT_WIDTH
+            width = Grafana_Grid_Position.DEFAULT_WIDTH
 
         self.x = x
         self.y = y
@@ -139,7 +139,7 @@ class Grid_Position:
     def get_json_string(self):
         return "\"h\": {}, \"w\": {}, \"x\": {}, \"y\": {}".format(self.height, self.width, self.x, self.y) 
 
-class Panel:
+class Grafana_Panel:
 
     GLOBAL_ID = 1
     DEFAULT_DATASOURCE = "MySQL"
@@ -148,20 +148,20 @@ class Panel:
 
     def __init__(self, datasource = None, id = None, title = None, panelType = None, gridPos = None, targets = None, xaxis = None, lines = None, points = None, bars = None, stack = None, percentage = None, aliasColors = None):
         if datasource is None:
-            datasource = Panel.DEFAULT_DATASOURCE
+            datasource = Grafana_Panel.DEFAULT_DATASOURCE
         if id is None:
-            id = str(Panel.GLOBAL_ID)
-            Panel.GLOBAL_ID += 1
+            id = str(Grafana_Panel.GLOBAL_ID)
+            Grafana_Panel.GLOBAL_ID += 1
         if title is None:
-            title = Panel.DEFAULT_TITLE
+            title = Grafana_Panel.DEFAULT_TITLE
         if panelType is None:
-            panelType = Panel.DEFAULT_PANEL_TYPE
+            panelType = Grafana_Panel.DEFAULT_PANEL_TYPE
         if gridPos is None:
-            gridPos = Grid_Position()
+            gridPos = Grafana_Grid_Position()
         if targets is None:
-            targets = [Target()]
+            targets = [Grafana_Target()]
         if xaxis is None:
-            xaxis = Xaxis()
+            xaxis = Grafana_Xaxis()
         if lines is None:
             lines = True
         if points is None:
@@ -206,7 +206,7 @@ class Panel:
         targetJSON = self.get_collective_targets_json()
         return "\"datasource\": \"{}\",\"id\": {},\"title\": \"{}\",\"type\":\"{}\",\"gridPos\":{}, \"targets\": [{}], \"xaxis\": {}, \"lines\": {}, \"points\": {}, \"bars\": {}, \"stack\": {}, \"percentage\": {}, \"aliasColors\": {}".format(self.datasource, self.id, self.title, self.panelType, "{" + self.gridPos.get_json_string() + "}", targetJSON, "{" + self.xaxis.get_json_string() + "}", "true" if self.lines else "false", "true" if self.points else "false","true" if self.bars else "false","true" if self.stack else "false","true" if self.percentage else "false", "{" + self.aliasColors + "}")
 
-class Xaxis:
+class Grafana_Xaxis:
     def __init__(self, showAxis = None):
         if showAxis is None:
             showAxis = False
@@ -216,7 +216,7 @@ class Xaxis:
     def get_json_string(self):
         return "\"show\": {}".format("true" if self.showAxis else "false")
 
-class Target:
+class Grafana_Target:
 
     DEFAULT_FORMAT = "time_series"
     DEFAULT_RAW_SQL = ""
@@ -224,13 +224,13 @@ class Target:
 
     def __init__(self, format = None, rawQuery = None, rawSql = None, refId = None):
         if format is None:
-            format = Target.DEFAULT_FORMAT
+            format = Grafana_Target.DEFAULT_FORMAT
         if rawQuery is None:
             rawQuery = True
         if rawSql is None:
-            rawSql = Target.DEFAULT_RAW_SQL
+            rawSql = Grafana_Target.DEFAULT_RAW_SQL
         if refId is None:
-            refId = Target.DEFAULT_REFID
+            refId = Grafana_Target.DEFAULT_REFID
 
         self.format = format
         self.rawQuery = rawQuery
@@ -240,7 +240,7 @@ class Target:
     def get_json_string(self):
         return "\"format\": \"{}\",\"rawQuery\": {},\"rawSql\": \"{}\",\"refId\": \"{}\"".format(self.format, "true" if self.rawQuery else "false", self.rawSql, self.refId)
 
-class Time:
+class Grafana_Time:
 
     @staticmethod
     def convert_to_standard_format(timeFormat, requiresConversion):
@@ -266,8 +266,8 @@ class Time:
         self.toRequiresConversion = toRequiresConversion
 
     def get_json_string(self):
-        self.timeFrom = Time.convert_to_standard_format(self.timeFrom, self.fromRequiresConversion)
-        self.timeTo = Time.convert_to_standard_format(self.timeTo, self.toRequiresConversion)
+        self.timeFrom = Grafana_Time.convert_to_standard_format(self.timeFrom, self.fromRequiresConversion)
+        self.timeTo = Grafana_Time.convert_to_standard_format(self.timeTo, self.toRequiresConversion)
         return "\"from\": {},\"to\": {}".format(self.timeFrom, self.timeTo)
 
 class MySQL_Manager:
@@ -458,14 +458,14 @@ class QueryBuilder:
         tableComponent = self.table
         for metric in self.metricList:
             metricComponent += '\'' + metric + ':\', ' + metric + "," + "\' \'" + ","
-        metricComponent = metricComponent[:-5] #Remove the last comma and space
+        metricComponent = metricComponent[:-5] # Remove the last comma and space
         metricComponent += ")"
         
         return "select {} as \'time\', {} as metric, {} FROM {} {} {} ORDER BY {}".format("from_unixtime(" + timeComponent + ")", metricComponent, valueComponent, tableComponent, whereComponent, groupByComponent, timeComponent)
 
 
 if __name__ == "__main__":
-    dsource = Datasource(name="My Datasource", database_type="mysql", database="microburst_incast_sync1", user="sankalp")
+    dsource = Grafana_Datasource(name="My Datasource", database_type="mysql", database="microburst_incast_sync1", user="sankalp")
     print(dsource.get_json_string())
 
 

@@ -9,10 +9,10 @@ from flask import (Flask, g, redirect, render_template, request, session,
 from flask_bootstrap import Bootstrap
 from mysql.connector import Error
 
-from lib.core import (Dashboard, Dashboard_Properties, Flow, Grid_Position,
-                      MySQL_Manager, Panel, QueryBuilder, Switch, Target, Time, Scenario)
+from lib.core import (Grafana_Dashboard, Grafana_Dashboard_Properties, Flow, Grafana_Grid_Position,
+                      MySQL_Manager, Grafana_Panel, QueryBuilder, Switch, Grafana_Target, Grafana_Time, Scenario)
 from lib.forms import PacketSearchForm, QueryForm, RandomQuery, SimpleButton
-from lib.vars import (ANNOTATIONS_URL, API_KEY, COLORS, DATABASE,
+from lib.config import (ANNOTATIONS_URL, API_KEY, COLORS, DATABASE,
                       DATASOURCE_URL, HOST, UNIX_TIME_START_YEAR, URL,
                       YEAR_SEC, MAX_LEGAL_UNIX_TIMESTAMP, headers)
 
@@ -96,7 +96,7 @@ def displaySwitch(switch):
             time_from = getFormattedTime(year_from)
             time_to = getFormattedTime(year_to)
 
-            dashboard = Dashboard(properties=Dashboard_Properties(title="Switch " + switch ,time=Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
+            dashboard = Grafana_Dashboard(properties=Grafana_Dashboard_Properties(title="Switch " + switch ,time=Grafana_Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
             
             payload = getFinalPayload(dashboard)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
@@ -148,9 +148,9 @@ def packetwise():
             q = "select time_in as \'time\', concat(switch) as metric, time_queue from packetrecords where hash = " + session.get('hash') + " order by time_in"
 
             panelList = []
-            panelList.append(Panel(title="Packet " + session.get('hash'), targets = [Target(rawSql=q)], datasource=DATABASE))
+            panelList.append(Grafana_Panel(title="Packet " + session.get('hash'), targets = [Grafana_Target(rawSql=q)], datasource=DATABASE))
 
-            dashboard = Dashboard(properties=Dashboard_Properties(title="Packet " + hash ,time=Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
+            dashboard = Grafana_Dashboard(properties=Grafana_Dashboard_Properties(title="Packet " + hash ,time=Grafana_Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
             payload = getFinalPayload(dashboard)
 
             response = requests.request("POST", url=URL, headers=headers, data = payload)
@@ -472,31 +472,31 @@ def getPanels(mysql_manager, switch):
     
     q1 = QueryBuilder(time_column = "time_stamp * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q1, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=0,y=0), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=q1)], datasource=DATABASE, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=0), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Grafana_Target(rawSql=q1)], datasource=DATABASE, aliasColors=aliasColors))
     
     q2 = QueryBuilder(time_column = "time_stamp * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value= 'ratio*total_pkts', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q2, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=0,y=11), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Target(rawSql=q2)], datasource=DATABASE, lines = False, bars = True, stack = True, percentage = False, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=11), title="Default Panel: Relative ratios of packets for each flow at Switch " + switch, targets = [Grafana_Target(rawSql=q2)], datasource=DATABASE, lines = False, bars = True, stack = True, percentage = False, aliasColors=aliasColors))
 
     q3 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['from_switch','to_switch'], table='egressthroughput', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q3, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Egress Throughput at Switch " + switch, targets = [Target(rawSql=q3)], datasource=DATABASE, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Egress Throughput at Switch " + switch, targets = [Grafana_Target(rawSql=q3)], datasource=DATABASE, aliasColors=aliasColors))
 
     q4 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'link_utilization', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q4, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=0,y=33),title="Default Panel: Link Utilization", targets = [Target(rawSql=q4)], datasource=DATABASE, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=33),title="Default Panel: Link Utilization", targets = [Grafana_Target(rawSql=q4)], datasource=DATABASE, aliasColors=aliasColors))
 
     q5 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'source_ip % 10', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q5, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Target(rawSql=q5)], datasource=DATABASE, points = True, lines = False, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Grafana_Target(rawSql=q5)], datasource=DATABASE, points = True, lines = False, aliasColors=aliasColors))
     
     q6 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'queue_depth', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q6, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=12,y=11),title="Default Panel: Queue Depth", targets = [Target(rawSql=q6)], datasource=DATABASE, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=11),title="Default Panel: Queue Depth", targets = [Grafana_Target(rawSql=q6)], datasource=DATABASE, aliasColors=aliasColors))
 
     q7 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['switch', 'source_ip'], table='throughput', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q7, colorMap, indexOfAvailableColour)
-    panelList.append(Panel(gridPos=Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Ingress Throughput at Switch " + switch, targets = [Target(rawSql=q7)], datasource=DATABASE, aliasColors=aliasColors))
+    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=22),title="Default Panel: Instantaneous Ingress Throughput at Switch " + switch, targets = [Grafana_Target(rawSql=q7)], datasource=DATABASE, aliasColors=aliasColors))
 
     return panelList
 
