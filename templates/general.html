@@ -65,12 +65,6 @@ General
 
 <div class="col-sm-12">
 <svg width="960" height="400">
-  <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-    refX="0" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" />
-    </marker>
-  </defs>
 </svg>
 </div>
 
@@ -622,6 +616,28 @@ function selectNode(selectedNode) {
   linkElements.attr('stroke', function (link) { return getLinkColor(selectedNode, link) })
 }
 
+var linecounter = 0
+
+function getY(id) {
+  var iterator = 0
+  for(iterator = 0; iterator < nodes.length; iterator++) {
+    if(nodes[iterator].id == id) {
+      return nodes[iterator].y
+    }
+  }
+  return -1
+}
+
+function getX(id) {
+  var iterator = 0
+  for(iterator = 0; iterator < nodes.length; iterator++) {
+    if(nodes[iterator].id == id) {
+      return nodes[iterator].x
+    }
+  }
+  return -1
+}
+
 var linkElements = svg.append("g")
   .attr("class", "links")
   .selectAll("line")
@@ -629,7 +645,21 @@ var linkElements = svg.append("g")
   .enter().append("line")
     .attr("stroke-width", 2)
     .attr("stroke", "rgba(255,255,255, 1.0)")
-    .attr("marker-mid", "url(#arrowhead)")
+    .attr("marker-end", function(line) {
+      var mrkr = svg.append("defs").append("marker")
+      .attr("id", "arrowhead" + linecounter)
+      .attr("markerWidth","20")
+      .attr("markerHeight", "14")
+      .attr("markerUnits", "userSpaceOnUse")
+      .attr("refX", 0.3 * Math.sqrt ( Math.pow(getY(line.source) - getY(line.target), 2) + Math.pow(getX(line.source) - getX(line.target), 2) ) )
+      .attr("refY", 7)
+      .attr("orient", "auto")
+      .attr("style", "fill:white")
+      .append("polygon")
+      .attr("points", "0 0, 20 7, 0 14, 10 7")
+      linecounter += 1
+      return "url(#arrowhead" + (linecounter-1) + ")"
+    })
     .on("mouseover", function(line) {		
             div.transition()		
                 .duration(20)		
@@ -709,14 +739,15 @@ simulation.nodes(nodes).on('tick', () => {
     .attr('y', function (node) { return node.y })
   linkElements
     .attr('x1', function (link) { 
+      // console.log(link);
       if( levels[link.source.id] < levels[link.target.id])
         return link.source.x - 10
       else return link.source.x + 10
       })
     .attr('y1', function (link) { 
 	  if( levels[link.source.id] < levels[link.target.id])
-		  return link.source.y + 10
-	  else return link.source.y - 10
+		  return link.source.y
+	  else return link.source.y
   })
     .attr('x2', function (link) { 
       if( levels[link.source.id] < levels[link.target.id])
@@ -725,8 +756,8 @@ simulation.nodes(nodes).on('tick', () => {
      })
     .attr('y2', function (link) {
 	  if( levels[link.source.id] < levels[link.target.id])
-	  	return link.target.y + 10
-	  else return link.target.y - 10
+	  	return link.target.y
+	  else return link.target.y
   	})
 })
 
