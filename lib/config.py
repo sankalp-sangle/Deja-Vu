@@ -2,7 +2,7 @@
 Pending
 '''
 
-DATABASE = "microburst_incast_sync1"
+DATABASE = "microburst_incast_heavyhitter5"
 
 HOST            = "localhost"
 URL             = "http://" + HOST + ":3000/api/dashboards/db"

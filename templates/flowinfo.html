@@ -29,14 +29,6 @@ Flow {{flo.identifier}}
   {% endfor %}
 </div>
 
-<div class="row">
-    <!-- <div class="d-flex justify-content-center my-4"> -->
-        <!-- <form class="range-field w-75"> -->
-          <input id="slider11" class="border border-primary" type="range" min="{{minLim}}" max="{{maxLim}}" >
-        <!-- </form> -->
-        <span class="font-weight-bold text-primary ml-2 mt-1 valueSpan"></span>
-    <!-- </div> -->
-</div>
 <div class = "row">
   <div class="col-sm-3 legend">
     <div style="text-align:center;">
@@ -92,23 +84,6 @@ Flow {{flo.identifier}}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
 
-$(document).ready(function() {
-
-const $valueSpan = $('.valueSpan');
-const $value = $('#slider11');
-
-$value.on('input change', () => {
-
-  var x = $value.val()  
-  $valueSpan.html("Time: " + $value.val() + " nanos");
-  d3.selectAll("circle")
-  .attr("fill", getNodeColor)
-  d3.selectAll("line")
-  .attr("stroke", getmylinefunc)
-  .attr("stroke-width", getmylinefuncstroke)
-});
-});
-
 var nodes = {{nodelist|tojson|safe}}
 
 var links = {{linklist|tojson|safe}}
@@ -121,23 +96,6 @@ var minTime = {{minLim2|tojson|safe}}
 
 var maxTime = {{maxLim2|tojson|safe}}
 
-var interval = maxTime.val - minTime.val
-var factor = interval / 20000
-var timer = d3.timer(function(duration) {
-    // console.log(minTime)
-    document.getElementById("slider11").value = duration * factor + minTime.val
-    const $valueSpan = $('.valueSpan');
-    const $value = $('#slider11');
-    $valueSpan.html("Time: " + $value.val() + " nanos");
-    // console.log(duration);
-    d3.selectAll("circle")
-    .attr("fill", getNodeColor)
-    d3.selectAll("line")
-    .attr("stroke", getmylinefunc)
-    .attr("stroke-width", getmylinefuncstroke)
-    if (duration * factor + minTime.val >= maxTime.val) timer.stop();
-
-});
 
 
 function getNeighbors(node) {
@@ -159,48 +117,17 @@ function isNeighborLink(node, link) {
 
 function getmylinefunc(line) {
 
-const $value = $('#slider11');
-var time = $value.val()
-if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
+if ( line.target in times && line.source in times ) {
         return 'orange'
     }
-// else if( time >= timerArr[line.source.id] - interval * 0.01) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.02) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.03) {
-//     return 'orange'}
-// else if( time >= timerArr[line.source.id] - interval * 0.04) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.05) {
-    // return 'orange'}
 return 'rgba(255,255,255,1.0)'
-
 }
 
 function getmylinefuncstroke(line) {
 
-const $value = $('#slider11');
-var time = $value.val()
-if ( time >= times[ line.target.id] && time >= times[line.source.id] ) {
+  if ( line.target in times && line.source in times ) {
         return 6
     }
-// else if( time >= timerArr[line.source.id] - interval * 0.01) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.02) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.03) {
-//     return 'orange'}
-// else if( time >= timerArr[line.source.id] - interval * 0.04) {
-//     return 'orange'
-// }
-// else if( time >= timerArr[line.source.id] - interval * 0.05) {
-    // return 'orange'}
 return 2
 
 }
@@ -209,26 +136,7 @@ function getNodeColor(node, neighbors) {
   if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
     return node.level === 1 ? 'blue' : 'green'
   }
-  const $value = $('#slider11');
-  var time = $value.val()
-  if ( time >= times[node.label] ) {
-          return 'yellow'
-      }
-  else if( time >= times[node.label] - interval * 0.01) {
-      return 'yellow'
-  }
-  else if( time >= times[node.label] - interval * 0.02) {
-      return 'gray'
-  }
-  else if( time >= times[node.label] - interval * 0.03) {
-      return 'red'
-  }
-  else if( time >= times[node.label] - interval * 0.04) {
-      return 'gray'
-  }
-  else if( time >= times[node.label] - interval * 0.05) {
-      return 'red'
-  }
+  if( node.label in times) return "yellow"
   return 'gray'
 }
 
@@ -257,9 +165,6 @@ var linkForce = d3
 var simulation = d3
   .forceSimulation()
   .force('link', linkForce)
-  // .force('charge', d3.forceManyBody().strength(-400))
-  // .force('center', d3.forceCenter(width / 2, height / 2))
-  // .force('collide', d3.forceCollide().strength(1))
 
 var dragDrop = d3.drag().on('start', function (node) {
   node.fx = node.x
@@ -290,8 +195,8 @@ var linkElements = svg.append("g")
   .selectAll("line")
   .data(links)
   .enter().append("line")
-    .attr("stroke-width", 2)
-	  .attr("stroke", "rgba(255,255,255, 1.0)")
+    .attr("stroke-width", getmylinefuncstroke)
+	  .attr("stroke", getmylinefunc)
 
 var nodeElements = svg.append("g")
   .attr("class", "nodes")
