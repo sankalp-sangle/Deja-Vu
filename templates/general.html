@@ -65,7 +65,12 @@ General
 
 <div class="col-sm-12">
 <svg width="960" height="400">
-  <text x="300" y="15" fill="orange" font-weight="bold">Switch</text>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+    refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" />
+    </marker>
+  </defs>
 </svg>
 </div>
 
@@ -623,7 +628,8 @@ var linkElements = svg.append("g")
   .data(links)
   .enter().append("line")
     .attr("stroke-width", 2)
-	  .attr("stroke", "rgba(255,255,255, 1.0)")
+    .attr("stroke", "rgba(255,255,255, 1.0)")
+    .attr("marker-mid", "url(#arrowhead)")
     .on("mouseover", function(line) {		
             div.transition()		
                 .duration(20)		
