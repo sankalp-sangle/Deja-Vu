@@ -704,16 +704,24 @@ simulation.nodes(nodes).on('tick', () => {
   linkElements
     .attr('x1', function (link) { 
       if( levels[link.source.id] < levels[link.target.id])
-        return link.source.x - 8
-      else return link.source.x + 8
+        return link.source.x - 10
+      else return link.source.x + 10
       })
-    .attr('y1', function (link) { return link.source.y })
+    .attr('y1', function (link) { 
+	  if( levels[link.source.id] < levels[link.target.id])
+		  return link.source.y + 10
+	  else return link.source.y - 10
+  })
     .attr('x2', function (link) { 
       if( levels[link.source.id] < levels[link.target.id])
-        return link.target.x - 8
-      else return link.target.x + 8
+        return link.target.x - 10
+      else return link.target.x + 10
      })
-    .attr('y2', function (link) { return link.target.y })
+    .attr('y2', function (link) {
+	  if( levels[link.source.id] < levels[link.target.id])
+	  	return link.target.y + 10
+	  else return link.target.y - 10
+  	})
 })
 
 simulation.force("link").links(links)
