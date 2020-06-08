@@ -100,8 +100,23 @@ def displaySwitch(switch):
             
             payload = getFinalPayload(dashboard)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
-            dashboardId = response.json()['uid']
-            return render_template('switchinfo.html', points = points, mapIp=scenario.map_ip, switch=scenario.switch_arr[switch], form = form, dashboardID=dashboardId, level = scenario.switch_to_level_mapping[switch])
+            dashboardUId = response.json()['uid']
+            dashboardId = response.json()['id']
+
+            # Delete existing annotations
+            response = requests.request("GET", url=ANNOTATIONS_URL, headers=headers)
+            annotations = response.json()
+            for annotation in annotations:
+                annotationId = annotation['id']
+                response = requests.request("DELETE", url=ANNOTATIONS_URL + "/" + str(annotationId), headers=headers)
+
+            # Post annotations
+            trigger_time = g.mysql_manager.execute_query('select time_hit from triggers')[1][0]
+            annotations_payload = "{ \"time\":" + str(int(trigger_time * MAX_LEGAL_UNIX_TIMESTAMP / scenario.max_time)) + "000" + ", \"text\":\"Trigger Hit!\", \"dashboardId\":" + str(dashboardId) + "}"
+            print(annotations_payload)
+            response = requests.request("POST", url=ANNOTATIONS_URL, headers=headers, data = annotations_payload)
+
+            return render_template('switchinfo.html', points = points, mapIp=scenario.map_ip, switch=scenario.switch_arr[switch], form = form, dashboardID=dashboardUId, level = scenario.switch_to_level_mapping[switch])
 
 @app.route('/query', methods=['GET', 'POST'])
 def query():

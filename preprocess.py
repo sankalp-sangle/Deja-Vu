@@ -32,10 +32,10 @@ def main():
     for query in CLEANUP_QUERIES:
         mysql_manager.execute_query(query)
     
-    mapIp = get_ip_addresses(mysql_manager)
+    mapIp = getIpAddresses(mysql_manager)
 
-    switchMap = initialize_switches(mysql_manager)
-    flowMap = initialize_flows(mysql_manager)
+    switchMap = initializeSwitches(mysql_manager)
+    flowMap = initializeFlows(mysql_manager)
 
     for switch in switchMap:
         switchMap[switch].populateFlowList(mysql_manager)
@@ -46,15 +46,13 @@ def main():
     for flow in flowMap:
         flowMap[flow].populateSwitchList(mysql_manager)
         flowMap[flow].populateRatios(mysql_manager)
-        flowMap[flow].print_info(mapIp)
-        
+        flowMap[flow].print_info(mapIp) 
 
-    print(str(len(flowMap)) + " flows")
-    print(str(len(switchMap)) + " switches") 
-
+    # Get switch from which the trigger originated
     result = mysql_manager.execute_query('select switch from triggers')
     trigger_switch = result[1:][0][0]
     
+    # Get peak queue depth
     result_set = mysql_manager.execute_query('select max(queue_depth) from packetrecords')
     peakDepth = result_set[1][0]
     print("Peak Depth: " + str(peakDepth))
@@ -64,26 +62,26 @@ def main():
     peakTimeOut = result_set[1][1]
     print("\nTime of peak depth: " + str(peakTimeOut))
 
-    #Find left and right
     result_set = mysql_manager.execute_query('select time_in, time_out, queue_depth from packetrecords where switch = \'' + trigger_switch + '\' order by time_out')
-    # print(result_set)
 
+    # Find index in result_set
     peakIndex = result_set.index( (peakTimeIn, peakTimeOut, peakDepth) )
-    # print("Index -> " + str(peakIndex))
 
+    # Initialize left and right indices
     lIndex = peakIndex - 1
     rIndex = peakIndex + 1
 
+    # Calculate left index
     while lIndex >= 0 and result_set[lIndex][2] > LEFT_THRESHOLD * peakDepth:
         lIndex = lIndex - 1
 
+    # Calculate right index
     while rIndex < len(result_set) and result_set[rIndex][2] > RIGHT_THRESHOLD * peakDepth:
         rIndex = rIndex + 1
 
+    # Ensure haven't gone beyond limits
     rIndex = (rIndex - 1) if rIndex == len(result_set) else rIndex
     lIndex = (lIndex + 1) if lIndex == 0 else lIndex
-
-    # print(str(lIndex) + "|||" + str(rIndex))
 
     lTime = result_set[lIndex][0]
     rTime = result_set[rIndex][1]
@@ -95,6 +93,7 @@ def main():
     if timeDiff > MAX_WIDTH:
         print("\nCONCLUDE: Time Gap is of the order of milliseconds. Probably underprovisioned network.")
     else:
+        # Time gap is of the order of microseconds. Possible microburst.
         result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where switch = \'" + trigger_switch + "\' and time_in between " + str(lTime) + " and " + str(rTime) + " group by 1")
         
         data_points = []
@@ -117,10 +116,9 @@ def main():
 
         printConclusion(normalizedJIndex)        
 
-    print("\n******************* END *******************\n")
-
     trigger_time = mysql_manager.execute_query('select time_hit from triggers')[1][0]
 
+    # Calculation of Ratios
     for switch in switchMap:
         result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switchMap[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
@@ -128,21 +126,20 @@ def main():
         print("Calculating ratios for " + str(switchMap[switch].identifier))
         getRatioTimeSeries(mysql_manager, switchMap[switch].identifier, (left_cutoff + right_cutoff) // 2, scenario)
 
+    # Calculation of Instantaneous Throughput
     for switch in switchMap:
         result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switchMap[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
         right_cutoff = result_set[1:][0][1]
         print("Calculating instantaneous throughput for " + str(switchMap[switch].identifier))
         getInstantaneousThroughputTimeSeries(mysql_manager, switchMap[switch].identifier, (left_cutoff + right_cutoff) // 2, scenario)
-    
-    # res = mysql_manager.execute_query("select distinct hash from packetrecords")[1:]
-    # packetHashes = [row[0] for row in res]
 
+    # Calculation of Paths
     getPaths(mysql_manager, scenario)
-    # # time.sleep(10)
 
     mysql_manager = MySQL_Manager(database=scenario)
 
+    # Calculation of Egress throughputs
     for switch in switchMap:
         result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switchMap[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
@@ -153,80 +150,6 @@ def main():
         getInstantaneousEgressThroughputTimeSeries(mysql_manager, switchMap[switch].identifier, (left_cutoff + right_cutoff) // 2, scenario)
 
 
-    data_source = Grafana_Datasource(name=scenario, database_type="mysql", database=scenario, user="sankalp")
-    json_body = "{ " + data_source.get_json_string() + " }"
-    response = requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
-    # print(response.json())
-
-    #delete all existing annotations
-    response = requests.request("GET", url=ANNOTATIONS_URL, headers=headers)
-
-    annotations = response.json()
-
-    for annotation in annotations:
-        annotationId = annotation['id']
-        response = requests.request("DELETE", url=ANNOTATIONS_URL + "/" + str(annotationId), headers=headers)
-
-    #time_from and time_to are lists of a tuple, [(time in seconds, 0)] like so
-    time_from_seconds = mysql_manager.execute_query('select min(time_in) from packetrecords')[1][0]
-    time_to_seconds = mysql_manager.execute_query('select max(time_in) from packetrecords')[1][0]
-    #Convert to date format
-    year_from = UNIX_TIME_START_YEAR + (time_from_seconds // YEAR_SEC)
-    year_to = UNIX_TIME_START_YEAR + 1 + (time_to_seconds // YEAR_SEC)
-    
-    assert year_from < year_to
-
-    time_from = get_formatted_time(year_from)
-    time_to = get_formatted_time(year_to)
-
-    # print(time_from, "\n", time_to)
-
-    #create Panel list
-    panelList = []
-
-    #append Default Queries
-    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=0),title="Default Panel: Relative ratios of packets for each flow at Trigger Switch", targets = [Grafana_Target(rawSql=QueryBuilder(time_column = "time_stamp", value= 'ratio', metricList = ['switch', 'source_ip'],  table='RATIOS').get_generic_query())], datasource=scenario))
-    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=0),title="Default Panel: Link Utilization", targets = [Grafana_Target(rawSql=QueryBuilder(value = 'link_utilization', metricList = ['switch']).get_generic_query())], datasource=scenario))
-    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=11),title="Default Panel: Queue Depth", targets = [Grafana_Target(rawSql=QueryBuilder(value = 'queue_depth * 80 / 1500', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(trigger_switch) + '\'']).get_generic_query())], datasource=scenario))
-    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=11),title="Queue depth at peak at trigger switch", targets = [Grafana_Target(rawSql=QueryBuilder(value = 'queue_depth * 80 / 1500', metricList = ['switch', 'source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(trigger_switch) + '\'', 'time_in between ' + str(lTime) + ' AND ' + str(rTime)]).get_generic_query())], datasource=scenario, lines = False, points = True))
-    panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=22),title="Packet distribution at peak at trigger switch", targets = [Grafana_Target(rawSql=QueryBuilder(value = 'source_ip % 10', metricList = ['source_ip'], isConditional=True, conditionalClauseList=['switch = \'' + str(trigger_switch) + '\'']).get_generic_query())], datasource=scenario, points = True, lines = False))    
-
-    dashboard = Grafana_Dashboard(properties=Grafana_Dashboard_Properties(title=scenario,time=Grafana_Time(timeFrom=time_from, timeTo=time_to)), panels=panelList)
-    
-    payload = get_final_payload(dashboard)
-    # print("\nPayload:\n" + payload)
-    response = requests.request("POST", url=URL, headers=headers, data = payload)
-    json_response = str(response.text.encode('utf8'))
-    # print("\nResponse:\n" + json_response)
-    
-    dashboardId = response.json()['id']
-    # print("Dashboard Id:" + str(dashboardId))
-
-    #Post annotations
-
-    
-    # print(trigger_time)
-
-    annotations_payload = "{ \"time\":" + str(trigger_time) + "000" + ", \"text\":\"Trigger Hit!\", \"dashboardId\":" + str(dashboardId) + "}"
-    # print("\nAnnotations Payload:\n" + annotations_payload)
-    response = requests.request("POST", url=ANNOTATIONS_URL, headers=headers, data = annotations_payload)
-    json_response = str(response.text.encode('utf8'))
-    # print("\nResponse:\n" + json_response)
-
-    annotations_payload = "{ \"time\":" + str(lTime) + "000" + ", \"text\":\"Left Width\", \"dashboardId\":" + str(dashboardId) + "}"
-    # print("\nLeft Width Payload:\n" + annotations_payload)
-    response = requests.request("POST", url=ANNOTATIONS_URL, headers=headers, data = annotations_payload)
-    json_response = str(response.text.encode('utf8'))
-    # print("\nResponse:\n" + json_response)
-
-    annotations_payload = "{ \"time\":" + str(rTime) + "000" + ", \"text\":\"Right Width\", \"dashboardId\":" + str(dashboardId) + "}"
-    # print("\nRight Width Payload:\n" + annotations_payload)
-    response = requests.request("POST", url=ANNOTATIONS_URL, headers=headers, data = annotations_payload)
-    json_response = str(response.text.encode('utf8'))
-
-
-    
-
 def printConclusion(normalizedJIndex):
     if normalizedJIndex > 0.7:
         print("\nCONCLUDE: It is probably a case of synchronized incast")
@@ -236,6 +159,11 @@ def printConclusion(normalizedJIndex):
         print("\nCONCLUDE: Doesn't fall in either category")        
 
 def calculate_jain_index(data_points):
+    '''
+    Calculates Jain's Fairness Index for values in a list data_points.
+    Information on Jain's Fairness Index:
+    https://en.wikipedia.org/wiki/Fairness_measure
+    '''
 
     n = len(data_points)
     numerator = 0
@@ -248,13 +176,16 @@ def calculate_jain_index(data_points):
 
     J_index = numerator * 1.0 / denominator
     return J_index
-    # print("\nResponse:\n" + json_response)
 
 
 
 
-def initialize_switches(mysql_manager):
-    print("Initializing switches...")
+def initializeSwitches(mysql_manager):
+    '''
+    Initializes a Switch object for each distinct switch in scenario
+    and returns a mapping (dictionary) between switch ID and switch object.
+    '''
+
     switchList = {}
     if mysql_manager is not None:
         result = mysql_manager.execute_query('select distinct switch from packetrecords')
@@ -263,8 +194,12 @@ def initialize_switches(mysql_manager):
     
     return switchList
 
-def initialize_flows(mysql_manager):
-    print("Initializing flows...")
+def initializeFlows(mysql_manager):
+    '''
+    Initializes a Flow object for each distinct flow in scenario
+    and returns a mapping (dictionary) between source IP and Flow object.
+    '''
+
     flowList = {}
     if mysql_manager is not None:
         result = mysql_manager.execute_query('select distinct source_ip from packetrecords')
@@ -273,17 +208,13 @@ def initialize_flows(mysql_manager):
     
     return flowList
 
-# def test_for_heavy_hitter(mysql_manager, flow, switchMap, flowMap, mapIp):
-#     print("Testing for flow:" + mapIp[flow])
-#     for switch in flowMap[flow].ratios:
-#         print("Switch:" + switch + " Ratio:" + str(flowMap[flow].ratios[switch]) )
-#         if flowMap[flow].ratios[switch] < HEAVY_HITTER_THRESHOLD:
-#             return False
-    
-#     return True
+def getIpAddresses(mysql_manager):
+    '''
+    Purpose: IP addresses are stored as a 32 bit integer in the
+    database. This function generates a mapping between 32 bit
+    integer and human readable form of the IP, and returns a dictionary.
+    '''
 
-def get_ip_addresses(mysql_manager):
-    print("Generating IP map...")
     result = mysql_manager.execute_query('select distinct source_ip from packetrecords')
     mapIp = {}
 
@@ -524,6 +455,6 @@ def Int2IP(ipnum):
     o3 = int(ipnum / pow(2,8)) % 256
     o4 = int(ipnum) % 256
     return '%(o1)s.%(o2)s.%(o3)s.%(o4)s' % locals()
-    
+
 if __name__ == "__main__":
     main()
