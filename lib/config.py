@@ -16,6 +16,7 @@ COLORS = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#FF
 MAX_WIDTH = 1000000 # Nanoseconds
 LEFT_THRESHOLD = 0.3
 RIGHT_THRESHOLD = 0.5
+INTERVAL = 100000 # Nanoseconds
 CLEANUP_QUERIES = ['set SQL_SAFE_UPDATES = 0', 'delete from packetrecords where time_in = 0', 'delete from packetrecords where source_ip = 1543569666']
 
 headers = {

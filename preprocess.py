@@ -6,9 +6,10 @@ import requests
 from mysql.connector import Error
 
 from lib.config import (ANNOTATIONS_URL, API_KEY, CLEANUP_QUERIES, COLORS,
-                        DATABASE, DATASOURCE_URL, HOST, LEFT_THRESHOLD,
-                        MAX_LEGAL_UNIX_TIMESTAMP, MAX_WIDTH, RIGHT_THRESHOLD,
-                        UNIX_TIME_START_YEAR, URL, YEAR_SEC, headers)
+                        DATABASE, DATASOURCE_URL, HOST, INTERVAL,
+                        LEFT_THRESHOLD, MAX_LEGAL_UNIX_TIMESTAMP, MAX_WIDTH,
+                        RIGHT_THRESHOLD, UNIX_TIME_START_YEAR, URL, YEAR_SEC,
+                        headers)
 from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Datasource, Grafana_Grid_Position, Grafana_Panel,
                       Grafana_Target, Grafana_Time, MySQL_Manager,
@@ -118,9 +119,9 @@ def main():
         printConclusion(normalized_J_index)        
 
     # Calculation of Ratios
-    # for switch in switch_map:
-    #     print("Calculating ratios for " + str(switch_map[switch].identifier))
-    #     getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
+    for switch in switch_map:
+        print("Calculating ratios for switch " + str(switch_map[switch].identifier))
+        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
     # Calculation of Instantaneous Throughput
     for switch in switch_map:
@@ -133,6 +134,7 @@ def main():
         getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
     # Calculation of Paths
+    print("Calculating Paths")
     getPaths(mysql_manager, scenario)
 
     # Re-establish connection since will now be accessing a table that
@@ -256,7 +258,6 @@ def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario)
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
-    INTERVAL = 100000 # 100 microsecond interval
     myDict = {}
     timeL, timeR = left_cutoff, left_cutoff + INTERVAL
 
@@ -302,7 +303,6 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
-    INTERVAL = 100000 # 100 microsecond interval
     print(str(INTERVAL) + " nanosecs" )
 
     myDict = {}
@@ -351,38 +351,39 @@ def getRatioTimeSeries(mysql_manager, switch, scenario):
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
-    INTERVAL = (right_cutoff - left_cutoff) // 250
-
     myDict = {}
 
-    mid_point = (left_cutoff + right_cutoff) // 2
+    currTime = left_cutoff
 
-    leftPointer = mid_point
+    result_set = mysql_manager.execute_query("select source_ip, hash, time_in, time_out from packetrecords where switch = '" + switch + "' order by time_out")[1:]
 
-    while leftPointer > left_cutoff:
-        result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where time_in < " + str(leftPointer) + " AND time_out > " + str(leftPointer) + " and switch = '" + switch + "'" +  " GROUP BY source_ip")[1:]
-        totalPackets = sum([row[1] for row in result_set])
-        print("Total pkts at time " + str(leftPointer) + " is " + str(totalPackets))
-        for row in result_set:
-            if row[0] in myDict:
-                myDict[row[0]].append( (leftPointer, 1.0 * row[1] / totalPackets, totalPackets) )
-            else:
-                myDict[row[0]] = []
+    start_index = 0
 
-        leftPointer = leftPointer - INTERVAL
+    while currTime <= right_cutoff:
+        IPFreq = {}
 
-    rightPointer = mid_point + INTERVAL    
-    while rightPointer < right_cutoff:
-        result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where time_in < " + str(rightPointer) + " AND time_out > " + str(rightPointer) +  " and switch = '" + switch + "'" +  " GROUP BY source_ip")[1:]
-        totalPackets = sum([row[1] for row in result_set])
-        print("Total pkts at time " + str(rightPointer) + " is " + str(totalPackets))
-        for row in result_set:
-            if row[0] in myDict:
-                myDict[row[0]].append( (rightPointer, 1.0 * row[1] / totalPackets, totalPackets) )
-            else:
-                myDict[row[0]] = []
+        for i in range(start_index, len(result_set)):
+            row = result_set[i]
+            if row[2] <= currTime and row[3] >= currTime:
+                ip = row[0]
+                if ip not in IPFreq:
+                    IPFreq[ip] = 0
+                IPFreq[ip] += 1
+        
 
-        rightPointer = rightPointer + INTERVAL
+        totalPackets = sum([IPFreq[ip] for ip in IPFreq])
+        
+        # Update myDict
+        for ip in IPFreq:
+            if ip not in myDict:
+                myDict[ip] = []
+            myDict[ip].append( (currTime, 1.0 * IPFreq[ip] / totalPackets, totalPackets) )
+        
+        # Update start index
+        while start_index < len(result_set) and result_set[start_index][3] < currTime:
+            start_index += 1
+
+        currTime += INTERVAL
 
     insertIntoSQL(myDict, scenario, switch)
 
@@ -392,9 +393,8 @@ def getPaths(mysql_manager, scenario):
     result_set = mysql_manager.execute_query("select time_in, time_out, switch, hash from packetrecords order by hash, time_in")[1:]
 
     i = 0
-    print(len(result_set))
+
     while i < len(result_set):
-        print(i)
 
         rowList = []
         currRow = result_set[i]
@@ -418,8 +418,7 @@ def getPaths(mysql_manager, scenario):
                 myDict[link] = []
             myDict[link].append([rowList[k][1], rowList[k+1][0], currHash])
 
-    print("Here's the dict:")
-    print(myDict)
+    print("Inserting Paths")
     insertIntoSQL3(myDict, scenario)
 
 def insertIntoSQL3(myDict, db_name):
