@@ -118,16 +118,18 @@ def main():
         printConclusion(normalized_J_index)        
 
     # Calculation of Ratios
-    for switch in switch_map:
-        print("Calculating ratios for " + str(switch_map[switch].identifier))
-        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
+    # for switch in switch_map:
+    #     print("Calculating ratios for " + str(switch_map[switch].identifier))
+    #     getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
     # Calculation of Instantaneous Throughput
     for switch in switch_map:
         result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
         right_cutoff = result_set[1:][0][1]
-        print("Calculating instantaneous throughput for " + str(switch_map[switch].identifier))
+        if left_cutoff == None or right_cutoff == None:
+            continue
+        print("Calculating ingress throughput for switch " + str(switch_map[switch].identifier))
         getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
     # Calculation of Paths
@@ -143,9 +145,9 @@ def main():
         result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
         right_cutoff = result_set[1:][0][1]
-        if left_cutoff==None or right_cutoff==None:
+        if left_cutoff == None or right_cutoff == None:
             continue
-        print("Calculating egress throughput for " + str(switch_map[switch].identifier))
+        print("Calculating egress throughput for switch " + str(switch_map[switch].identifier))
         getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
 
@@ -254,24 +256,34 @@ def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario)
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
-    INTERVAL = (right_cutoff - left_cutoff) // 250
-
+    INTERVAL = 100000 # 100 microsecond interval
     myDict = {}
-
     timeL, timeR = left_cutoff, left_cutoff + INTERVAL
 
-    while timeR < right_cutoff:
-        result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where time_in <= " + str(timeR) + " AND time_in >= " + str(timeL) + " and switch = '" + switch + "'" +  " GROUP BY source_ip")[1:]
+    result_set = mysql_manager.execute_query("select source_ip, time_in from packetrecords where switch = '" + switch + "' order by time_in")[1:]
 
-        for row in result_set:
-            if row[0] in myDict:
-                myDict[row[0]].append( (timeL, timeR, switch, row[1]) )
-            else:
-                myDict[row[0]] = []
+    currIndex = 0
+
+    while timeL < right_cutoff:
+        # Initialize frequency map
+        freqMap = {}
+
+        while currIndex < len(result_set) and result_set[currIndex][1] >= timeL and result_set[currIndex][1] <= timeR:
+            # Add record
+            ip =  result_set[currIndex][0]
+            if ip not in freqMap:
+                freqMap[ip] = 0
+            freqMap[ip] += 1
+            currIndex += 1
         
+        # populate myDict
+        for ip in freqMap:
+            if ip not in myDict:
+                myDict[ip] = []
+            myDict[ip].append( (timeL, timeR, switch, freqMap[ip]) )
         timeL = timeR
         timeR = timeR + INTERVAL
-    
+
     insertIntoSQL2(myDict, scenario, switch, INTERVAL)
 
 def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
@@ -290,26 +302,37 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
-    INTERVAL = (right_cutoff - left_cutoff) // 500
-
+    INTERVAL = 100000 # 100 microsecond interval
     print(str(INTERVAL) + " nanosecs" )
 
     myDict = {}
 
     timeL, timeR = left_cutoff, left_cutoff + INTERVAL
 
-    while timeR < right_cutoff:
-        result_set = mysql_manager.execute_query("select to_switch, count(hash) from linkmaps where time_exit <= " + str(timeR) + " AND time_exit >= " + str(timeL) + " and from_switch = '" + switch + "'" +  " GROUP BY to_switch")[1:]
+    result_set = mysql_manager.execute_query("select to_switch, time_exit from linkmaps where from_switch = '" + switch + "' order by time_exit")[1:]
+    
+    currIndex = 0
 
-        for row in result_set:
-            if row[0] in myDict:
-                myDict[row[0]].append( (timeL, timeR, switch, row[1]) )
-            else:
-                myDict[row[0]] = []
+    while timeL < right_cutoff:
+        # Initialize frequency map
+        freqMap = {}
+
+        while currIndex < len(result_set) and result_set[currIndex][1] >= timeL and result_set[currIndex][1] <= timeR:
+            # Add record
+            to_switch =  result_set[currIndex][0]
+            if to_switch not in freqMap:
+                freqMap[to_switch] = 0
+            freqMap[to_switch] += 1
+            currIndex += 1
         
+        # populate myDict
+        for to_switch in freqMap:
+            if to_switch not in myDict:
+                myDict[to_switch] = []
+            myDict[to_switch].append( (timeL, timeR, switch, freqMap[to_switch]) )
         timeL = timeR
         timeR = timeR + INTERVAL
-    
+
     insertIntoSQL4(myDict, scenario, switch, INTERVAL)
 
 def getRatioTimeSeries(mysql_manager, switch, scenario):
@@ -365,7 +388,6 @@ def getRatioTimeSeries(mysql_manager, switch, scenario):
 
 def getPaths(mysql_manager, scenario):
     myDict = {}
-    # print(len(packetHashes))
 
     result_set = mysql_manager.execute_query("select time_in, time_out, switch, hash from packetrecords order by hash, time_in")[1:]
 
