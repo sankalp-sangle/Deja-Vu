@@ -32,21 +32,21 @@ def main():
     for query in CLEANUP_QUERIES:
         mysql_manager.execute_query(query)
     
-    mapIp = getIpAddresses(mysql_manager)
+    map_ip = getIpAddresses(mysql_manager)
 
-    switchMap = initializeSwitches(mysql_manager)
-    flowMap = initializeFlows(mysql_manager)
+    switch_map = initializeSwitches(mysql_manager)
+    flow_map = initializeFlows(mysql_manager)
 
-    for switch in switchMap:
-        switchMap[switch].populateFlowList(mysql_manager)
-        switchMap[switch].populateRatios(mysql_manager)
-        switchMap[switch].print_info(mapIp)
+    for switch in switch_map:
+        switch_map[switch].populateFlowList(mysql_manager)
+        switch_map[switch].populateRatios(mysql_manager)
+        switch_map[switch].print_info(map_ip)
         
 
-    for flow in flowMap:
-        flowMap[flow].populateSwitchList(mysql_manager)
-        flowMap[flow].populateRatios(mysql_manager)
-        flowMap[flow].print_info(mapIp) 
+    for flow in flow_map:
+        flow_map[flow].populateSwitchList(mysql_manager)
+        flow_map[flow].populateRatios(mysql_manager)
+        flow_map[flow].print_info(map_ip) 
 
     # Get switch from which the trigger originated
     result = mysql_manager.execute_query('select switch from triggers')
@@ -54,53 +54,54 @@ def main():
     
     # Get peak queue depth
     result_set = mysql_manager.execute_query('select max(queue_depth) from packetrecords')
-    peakDepth = result_set[1][0]
-    print("Peak Depth: " + str(peakDepth))
+    peak_queue_depth = result_set[1][0]
+    print("Peak Queue Depth: " + str(peak_queue_depth))
 
-    result_set = mysql_manager.execute_query('select time_in, time_out, queue_depth from packetrecords where queue_depth = ' + str(peakDepth))
-    peakTimeIn = result_set[1][0]
-    peakTimeOut = result_set[1][1]
-    print("\nTime of peak depth: " + str(peakTimeOut))
+    result_set = mysql_manager.execute_query('select time_in, time_out, queue_depth from packetrecords where queue_depth = ' + str(peak_queue_depth))
+    time_in_at_peak = result_set[1][0]
+    time_out_at_peak = result_set[1][1]
+    print("\nTime of peak depth: " + str(time_out_at_peak))
 
+    # Obtain set of queue depths at different times, ordered by time out.
     result_set = mysql_manager.execute_query('select time_in, time_out, queue_depth from packetrecords where switch = \'' + trigger_switch + '\' order by time_out')
 
     # Find index in result_set
-    peakIndex = result_set.index( (peakTimeIn, peakTimeOut, peakDepth) )
+    index_of_peak = result_set.index( (time_in_at_peak, time_out_at_peak, peak_queue_depth) )
 
     # Initialize left and right indices
-    lIndex = peakIndex - 1
-    rIndex = peakIndex + 1
+    left_pointer = index_of_peak - 1
+    right_pointer = index_of_peak + 1
 
     # Calculate left index
-    while lIndex >= 0 and result_set[lIndex][2] > LEFT_THRESHOLD * peakDepth:
-        lIndex = lIndex - 1
+    while left_pointer >= 0 and result_set[left_pointer][2] > LEFT_THRESHOLD * peak_queue_depth:
+        left_pointer = left_pointer - 1
 
     # Calculate right index
-    while rIndex < len(result_set) and result_set[rIndex][2] > RIGHT_THRESHOLD * peakDepth:
-        rIndex = rIndex + 1
+    while right_pointer < len(result_set) and result_set[right_pointer][2] > RIGHT_THRESHOLD * peak_queue_depth:
+        right_pointer = right_pointer + 1
 
     # Ensure haven't gone beyond limits
-    rIndex = (rIndex - 1) if rIndex == len(result_set) else rIndex
-    lIndex = (lIndex + 1) if lIndex == 0 else lIndex
+    right_pointer = (right_pointer - 1) if right_pointer == len(result_set) else right_pointer
+    left_pointer = (left_pointer + 1) if left_pointer == 0 else left_pointer
 
-    lTime = result_set[lIndex][0]
-    rTime = result_set[rIndex][1]
+    left_time = result_set[left_pointer][0]
+    right_time = result_set[right_pointer][1]
 
-    timeDiff = rTime - lTime
+    width_of_peak = right_time - left_time
 
-    print("\nLeft time: {} Right time: {} Time difference: {} microseconds".format(str(lTime), str(rTime), str(timeDiff/1000)))
+    print("\nLeft time: {} Right time: {} Time difference: {} microseconds".format(str(left_time), str(right_time), str(width_of_peak/1000)))
 
-    if timeDiff > MAX_WIDTH:
+    if width_of_peak > MAX_WIDTH:
         print("\nCONCLUDE: Time Gap is of the order of milliseconds. Probably underprovisioned network.")
     else:
-        # Time gap is of the order of microseconds. Possible microburst.
-        result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where switch = \'" + trigger_switch + "\' and time_in between " + str(lTime) + " and " + str(rTime) + " group by 1")
+        # Width of peak is of the order of microseconds. Possible microburst.
+        result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where switch = \'" + trigger_switch + "\' and time_in between " + str(left_time) + " and " + str(right_time) + " group by 1")
         
         data_points = []
 
         print("\nData points within the band:")
         for row in result_set[1:]:
-            print("Flow:" + mapIp[row[0]] + " Count: " + str(row[1]))
+            print("Flow:" + map_ip[row[0]] + " Count: " + str(row[1]))
             data_points.append(row[1])
         
         # Jain Fairness Index calculation
@@ -111,43 +112,41 @@ def main():
         print("\nTotal data points: " + str(sum(data_points)))
         
         print("\nJ Index : " + str(J_index)) 
-        normalizedJIndex = (J_index - 1.0/n) / (1 - 1.0/n)
-        print("Normalized J Index : " + str(normalizedJIndex))
+        normalized_J_index = (J_index - 1.0/n) / (1 - 1.0/n)
+        print("Normalized J Index : " + str(normalized_J_index))
 
-        printConclusion(normalizedJIndex)        
-
-    trigger_time = mysql_manager.execute_query('select time_hit from triggers')[1][0]
+        printConclusion(normalized_J_index)        
 
     # Calculation of Ratios
-    for switch in switchMap:
-        result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switchMap[switch].identifier + "'")
-        left_cutoff = result_set[1:][0][0]
-        right_cutoff = result_set[1:][0][1]
-        print("Calculating ratios for " + str(switchMap[switch].identifier))
-        getRatioTimeSeries(mysql_manager, switchMap[switch].identifier, (left_cutoff + right_cutoff) // 2, scenario)
+    for switch in switch_map:
+        print("Calculating ratios for " + str(switch_map[switch].identifier))
+        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
     # Calculation of Instantaneous Throughput
-    for switch in switchMap:
-        result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switchMap[switch].identifier + "'")
+    for switch in switch_map:
+        result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
         right_cutoff = result_set[1:][0][1]
-        print("Calculating instantaneous throughput for " + str(switchMap[switch].identifier))
-        getInstantaneousThroughputTimeSeries(mysql_manager, switchMap[switch].identifier, (left_cutoff + right_cutoff) // 2, scenario)
+        print("Calculating instantaneous throughput for " + str(switch_map[switch].identifier))
+        getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
     # Calculation of Paths
     getPaths(mysql_manager, scenario)
 
+    # Re-establish connection since will now be accessing a table that
+    # was newly created, hence schema in connection object needs to be 
+    # updated.
     mysql_manager = MySQL_Manager(database=scenario)
 
     # Calculation of Egress throughputs
-    for switch in switchMap:
-        result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switchMap[switch].identifier + "'")
+    for switch in switch_map:
+        result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
         right_cutoff = result_set[1:][0][1]
         if left_cutoff==None or right_cutoff==None:
             continue
-        print("Calculating egress throughput for " + str(switchMap[switch].identifier))
-        getInstantaneousEgressThroughputTimeSeries(mysql_manager, switchMap[switch].identifier, (left_cutoff + right_cutoff) // 2, scenario)
+        print("Calculating egress throughput for " + str(switch_map[switch].identifier))
+        getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
 
 
 def printConclusion(normalizedJIndex):
@@ -176,9 +175,6 @@ def calculate_jain_index(data_points):
 
     J_index = numerator * 1.0 / denominator
     return J_index
-
-
-
 
 def initializeSwitches(mysql_manager):
     '''
@@ -224,15 +220,37 @@ def getIpAddresses(mysql_manager):
     return mapIp
 
 def get_formatted_time(year):
+    '''
+    Parameters: year : str
+    Returns a string in the format accepted by Grafana
+    '''
+
     return "{}-{}-{}".format(year, "01", "01")
 
 def get_final_payload(dashboard):
+    '''
+    Parameters:
+    dashboard : Object of type Dashboard
+
+    Returns a string representing the final JSON object to be sent
+    to Grafana for creating dashboard.
+    '''
+
     payload = "{ \"dashboard\": {" + dashboard.get_json_string() + "}, \"overwrite\": true}"
     return payload
     
-def getInstantaneousThroughputTimeSeries(mysql_manager, switch, time, scenario):
+def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario):
+    '''
+    Parameters: 
+    mysql_manager : Object of MySQL_Manager class, used to communicate
+    with MySQL instance.
+    scenario : str -> the name of the scenario, also the database name
+    in MySQL.
+    switch : str -> Identifier of the switch for whom the time series
+    of instantaneous ingress throughput needs to be calculated.
+    '''
+
     result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch + "'")
-    # print(result_set)
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
@@ -254,19 +272,21 @@ def getInstantaneousThroughputTimeSeries(mysql_manager, switch, time, scenario):
         timeL = timeR
         timeR = timeR + INTERVAL
     
-
-
-    
-    # for ip in myDict:
-    #     print(str(ip))
-    #     for tuple in myDict[ip]:
-    #         print(str(ip) + " " + str(tuple))
-
     insertIntoSQL2(myDict, scenario, switch, INTERVAL)
 
-def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, time, scenario):
+def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
+    '''
+    Parameters: 
+    mysql_manager : Object of MySQL_Manager class, used to communicate
+    with MySQL instance.
+    scenario : str -> the name of the scenario, also the database name
+    in MySQL.
+    switch : str -> Identifier of the switch for whom the time series
+    of instantaneous egress throughput needs to be calculated.
+    '''
+    
     result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch + "'")
-    # print(result_set)
+    
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
@@ -292,9 +312,19 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, time, scen
     
     insertIntoSQL4(myDict, scenario, switch, INTERVAL)
 
-def getRatioTimeSeries(mysql_manager, switch, time, scenario):
+def getRatioTimeSeries(mysql_manager, switch, scenario):
+    '''
+    Parameters: 
+    mysql_manager : Object of MySQL_Manager class, used to communicate
+    with MySQL instance.
+    scenario : str -> the name of the scenario, also the database name
+    in MySQL.
+    switch : str -> Identifier of the switch for whom the time series
+    of ratio of flows needs to be calculated.
+    '''
+
     result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch + "'")
-    # print(result_set)
+    
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
 
@@ -302,7 +332,10 @@ def getRatioTimeSeries(mysql_manager, switch, time, scenario):
 
     myDict = {}
 
-    leftPointer = time
+    mid_point = (left_cutoff + right_cutoff) // 2
+
+    leftPointer = mid_point
+
     while leftPointer > left_cutoff:
         result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where time_in < " + str(leftPointer) + " AND time_out > " + str(leftPointer) + " and switch = '" + switch + "'" +  " GROUP BY source_ip")[1:]
         totalPackets = sum([row[1] for row in result_set])
@@ -315,7 +348,7 @@ def getRatioTimeSeries(mysql_manager, switch, time, scenario):
 
         leftPointer = leftPointer - INTERVAL
 
-    rightPointer = time + INTERVAL    
+    rightPointer = mid_point + INTERVAL    
     while rightPointer < right_cutoff:
         result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where time_in < " + str(rightPointer) + " AND time_out > " + str(rightPointer) +  " and switch = '" + switch + "'" +  " GROUP BY source_ip")[1:]
         totalPackets = sum([row[1] for row in result_set])
@@ -327,12 +360,6 @@ def getRatioTimeSeries(mysql_manager, switch, time, scenario):
                 myDict[row[0]] = []
 
         rightPointer = rightPointer + INTERVAL
-            
-    
-    # for ip in myDict:
-    #     print(str(ip))
-    #     for tuple in myDict[ip]:
-    #         print(str(ip) + " " + str(tuple))
 
     insertIntoSQL(myDict, scenario, switch)
 
@@ -450,6 +477,13 @@ def insertIntoSQL4(myDict, db_name, switch, interval):
     mysql_db.commit()
 
 def Int2IP(ipnum):
+    ''''
+    Parameters:
+    ipnum - a 32 bit integer that represents a traditional IP address
+
+    Purpose: converts ipnum into a human readable string form.
+    '''
+
     o1 = int(ipnum / pow(2,24)) % 256
     o2 = int(ipnum / pow(2,16)) % 256
     o3 = int(ipnum / pow(2,8)) % 256
