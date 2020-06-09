@@ -21,14 +21,8 @@ flaggg3 = 0
 flaggg4 = 0
 
 def main():
-    
-    if len(sys.argv) != 2:
-        print("Incorrect number of arguments\nUSAGE: $ python3 preprocess.py <scenario_name>")
-        sys.exit(1)
 
-    scenario = str(sys.argv[1])
-
-    mysql_manager = MySQL_Manager(database=scenario)
+    mysql_manager = MySQL_Manager(database=DATABASE)
 
     for query in CLEANUP_QUERIES:
         mysql_manager.execute_query(query)
@@ -121,7 +115,7 @@ def main():
     # Calculation of Ratios
     for switch in switch_map:
         print("Calculating ratios for switch " + str(switch_map[switch].identifier))
-        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
+        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE)
 
     # Calculation of Instantaneous Throughput
     for switch in switch_map:
@@ -131,16 +125,16 @@ def main():
         if left_cutoff == None or right_cutoff == None:
             continue
         print("Calculating ingress throughput for switch " + str(switch_map[switch].identifier))
-        getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
+        getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE)
 
     # Calculation of Paths
     print("Calculating Paths")
-    getPaths(mysql_manager, scenario)
+    getPaths(mysql_manager, DATABASE)
 
     # Re-establish connection since will now be accessing a table that
     # was newly created, hence schema in connection object needs to be 
     # updated.
-    mysql_manager = MySQL_Manager(database=scenario)
+    mysql_manager = MySQL_Manager(database=DATABASE)
 
     # Calculation of Egress throughputs
     for switch in switch_map:
@@ -150,7 +144,7 @@ def main():
         if left_cutoff == None or right_cutoff == None:
             continue
         print("Calculating egress throughput for switch " + str(switch_map[switch].identifier))
-        getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, scenario)
+        getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE)
 
 
 def printConclusion(normalizedJIndex):

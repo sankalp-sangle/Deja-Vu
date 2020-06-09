@@ -500,7 +500,7 @@ def getPanels(mysql_manager, switch):
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q5, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=0),title="Packet distribution at trigger switch", targets = [Grafana_Target(rawSql=q5)], datasource=DATABASE, points = True, lines = False, aliasColors=aliasColors))
     
-    q6 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'queue_depth', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    q6 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'queue_depth * 80 / 1500', metricList = ['switch'], isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q6, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=11),title="Default Panel: Queue Depth", targets = [Grafana_Target(rawSql=q6)], datasource=DATABASE, aliasColors=aliasColors))
 
