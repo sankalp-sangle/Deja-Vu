@@ -654,9 +654,9 @@ var linkElements = svg.append("g")
       .attr("refX", 0.3 * Math.sqrt ( Math.pow(getY(line.source) - getY(line.target), 2) + Math.pow(getX(line.source) - getX(line.target), 2) ) )
       .attr("refY", 7)
       .attr("orient", "auto")
-      .attr("style", "fill:yellow")
+      .attr("style", "fill:gold; stroke:black; stroke-width:1")
       .append("polygon")
-      .attr("points", "0 0, 20 7, 0 14, 10 7")
+      .attr("points", "0 0, 20 7, 0 14, 4 7")
       linecounter += 1
       return "url(#arrowhead" + (linecounter-1) + ")"
     })
