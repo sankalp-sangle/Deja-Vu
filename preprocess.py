@@ -82,8 +82,11 @@ def main():
 
     print("\nLeft time: {} Right time: {} Time difference: {} microseconds".format(str(left_time), str(right_time), str(width_of_peak/1000)))
 
+    result_file = open('result.txt', 'w')
+
     if width_of_peak > MAX_WIDTH:
-        print("\nCONCLUDE: Time Gap is of the order of milliseconds. Probably underprovisioned network.")
+        result_file.write("CONCLUDE: Time Gap is of the order of milliseconds. Probably underprovisioned network.")
+        result_file.close()
     else:
         # Width of peak is of the order of microseconds. Possible microburst.
         result_set = mysql_manager.execute_query("select source_ip, count(hash) from packetrecords where switch = \'" + trigger_switch + "\' and time_in between " + str(left_time) + " and " + str(right_time) + " group by 1")
@@ -102,11 +105,12 @@ def main():
         n = len(data_points)
         print("\nTotal data points: " + str(sum(data_points)))
         
-        print("\nJ Index : " + str(J_index)) 
         normalized_J_index = (J_index - 1.0/n) / (1 - 1.0/n)
-        print("Normalized J Index : " + str(normalized_J_index))
+        result_file.write("Normalized J Index : " + str(normalized_J_index))
 
-        printConclusion(normalized_J_index)        
+        writeConclusion(normalized_J_index, result_file)  
+
+        result_file.close()      
 
     # Calculation of Ratios
     firstCall = True
@@ -152,13 +156,13 @@ def main():
             firstCall = False
 
 
-def printConclusion(normalizedJIndex):
+def writeConclusion(normalizedJIndex, result_file):
     if normalizedJIndex > 0.7:
-        print("\nCONCLUDE: It is probably a case of synchronized incast")
+        result_file.write("\nCONCLUDE: It is probably a case of synchronized incast")
     elif normalizedJIndex < 0.45:
-        print("\nCONCLUDE: It is probably a case of a dominant heavy hitter")
+        result_file.write("\nCONCLUDE: It is probably a case of a dominant heavy hitter")
     else:
-        print("\nCONCLUDE: Doesn't fall in either category")        
+        result_file.write("\nCONCLUDE: Doesn't fall in either category")        
 
 def calculate_jain_index(data_points):
     '''

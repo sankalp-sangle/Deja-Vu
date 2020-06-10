@@ -50,7 +50,13 @@ def internal_server_error(e):
 
 @app.route('/')
 def index():
-    return render_template('index.html', switch=scenario.trigger_switch, duration=(scenario.max_time-scenario.min_time) / 10**9)
+    message = ""
+    try:
+        message = open('result.txt', 'r').read()
+    except:
+        message = "No results found. Please run preprocess.py on the scenario first."
+
+    return render_template('index.html', scenario=DATABASE, switch=scenario.trigger_switch, duration=(scenario.max_time-scenario.min_time) / 10**9, message = message)
 
 @app.route('/switches')
 def switches():
