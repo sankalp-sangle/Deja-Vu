@@ -165,7 +165,7 @@ class Grafana_Grid_Position:
     '''
 
     
-    DEFAULT_HEIGHT = 11
+    DEFAULT_HEIGHT = 9
     DEFAULT_WIDTH = 12
 
     def __init__(self, x = None, y = None, height = None, width = None):
