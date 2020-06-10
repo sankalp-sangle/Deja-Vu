@@ -15,10 +15,6 @@ from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Target, Grafana_Time, MySQL_Manager,
                       QueryBuilder, Switch)
 
-flaggg1 = 0
-flaggg2 = 0
-flaggg3 = 0
-flaggg4 = 0
 
 def main():
 
@@ -113,11 +109,15 @@ def main():
         printConclusion(normalized_J_index)        
 
     # Calculation of Ratios
+    firstCall = True
     for switch in switch_map:
         print("Calculating ratios for switch " + str(switch_map[switch].identifier))
-        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE)
+        getRatioTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE, firstCall)
+        if firstCall:
+            firstCall = False
 
     # Calculation of Instantaneous Throughput
+    firstCall = True
     for switch in switch_map:
         result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
@@ -125,7 +125,9 @@ def main():
         if left_cutoff == None or right_cutoff == None:
             continue
         print("Calculating ingress throughput for switch " + str(switch_map[switch].identifier))
-        getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE)
+        getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE, firstCall)
+        if firstCall:
+            firstCall = False
 
     # Calculation of Paths
     print("Calculating Paths")
@@ -137,6 +139,7 @@ def main():
     mysql_manager = MySQL_Manager(database=DATABASE)
 
     # Calculation of Egress throughputs
+    firstCall = True
     for switch in switch_map:
         result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
@@ -144,7 +147,9 @@ def main():
         if left_cutoff == None or right_cutoff == None:
             continue
         print("Calculating egress throughput for switch " + str(switch_map[switch].identifier))
-        getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE)
+        getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch_map[switch].identifier, DATABASE, firstCall)
+        if firstCall:
+            firstCall = False
 
 
 def printConclusion(normalizedJIndex):
@@ -237,7 +242,7 @@ def get_final_payload(dashboard):
     payload = "{ \"dashboard\": {" + dashboard.get_json_string() + "}, \"overwrite\": true}"
     return payload
     
-def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario):
+def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario, firstCall):
     '''
     Parameters: 
     mysql_manager : Object of MySQL_Manager class, used to communicate
@@ -246,6 +251,10 @@ def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario)
     in MySQL.
     switch : str -> Identifier of the switch for whom the time series
     of instantaneous ingress throughput needs to be calculated.
+    firstCall : boolean -> If true, implies function is being called
+    for the first time, hence appropriate table needs to be created,
+    OR deleted if already existing and created again. firstCall is 
+    passed on to insert function.
     '''
 
     result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch + "'")
@@ -279,9 +288,9 @@ def getInstantaneousIngressThroughputTimeSeries(mysql_manager, switch, scenario)
         timeL = timeR
         timeR = timeR + INTERVAL
 
-    insertIntoSQL2(myDict, scenario, switch, INTERVAL)
+    insertIngressThroughputIntoMySQL(myDict, scenario, switch, INTERVAL, firstCall)
 
-def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
+def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario, firstCall):
     '''
     Parameters: 
     mysql_manager : Object of MySQL_Manager class, used to communicate
@@ -290,6 +299,10 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
     in MySQL.
     switch : str -> Identifier of the switch for whom the time series
     of instantaneous egress throughput needs to be calculated.
+    firstCall : boolean -> If true, implies function is being called
+    for the first time, hence appropriate table needs to be created,
+    OR deleted if already existing and created again. firstCall is 
+    passed on to insert function.
     '''
     
     result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch + "'")
@@ -327,9 +340,9 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario):
         timeL = timeR
         timeR = timeR + INTERVAL
 
-    insertIntoSQL4(myDict, scenario, switch, INTERVAL)
+    insertEgressThroughputIntoMySQL(myDict, scenario, switch, INTERVAL, firstCall)
 
-def getRatioTimeSeries(mysql_manager, switch, scenario):
+def getRatioTimeSeries(mysql_manager, switch, scenario, firstCall):
     '''
     Parameters: 
     mysql_manager : Object of MySQL_Manager class, used to communicate
@@ -338,6 +351,10 @@ def getRatioTimeSeries(mysql_manager, switch, scenario):
     in MySQL.
     switch : str -> Identifier of the switch for whom the time series
     of ratio of flows needs to be calculated.
+    firstCall : boolean -> If true, implies function is being called
+    for the first time, hence appropriate table needs to be created,
+    OR deleted if already existing and created again. firstCall is 
+    passed on to insert function.
     '''
 
     result_set = mysql_manager.execute_query("select min(time_in), max(time_out) from packetrecords where switch = '"+ switch + "'")
@@ -379,7 +396,7 @@ def getRatioTimeSeries(mysql_manager, switch, scenario):
 
         currTime += INTERVAL
 
-    insertIntoSQL(myDict, scenario, switch)
+    insertRatiosIntoMySQL(myDict, scenario, switch, firstCall)
 
 def getPaths(mysql_manager, scenario):
     myDict = {}
@@ -413,18 +430,15 @@ def getPaths(mysql_manager, scenario):
             myDict[link].append([rowList[k][1], rowList[k+1][0], currHash])
 
     print("Inserting Paths")
-    insertIntoSQL3(myDict, scenario)
+    insertPathsIntoMySQL(myDict, scenario)
 
-def insertIntoSQL3(myDict, db_name):
-    global flaggg3
+def insertPathsIntoMySQL(myDict, db_name):
     mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
-    if flaggg3 == 0:
-        mycursor.execute('DROP TABLE IF EXISTS LINKMAPS')
-        flaggg3 = 1
-        mycursor.execute('CREATE TABLE LINKMAPS (time_enter bigint, time_exit bigint, from_switch VARCHAR(255), to_switch VARCHAR(255), hash bigint )')
+    mycursor.execute('DROP TABLE IF EXISTS LINKMAPS')
+    mycursor.execute('CREATE TABLE LINKMAPS (time_enter bigint, time_exit bigint, from_switch VARCHAR(255), to_switch VARCHAR(255), hash bigint )')
 
     for link in myDict:
         query = 'INSERT INTO LINKMAPS (time_enter, time_exit, from_switch, to_switch, hash) VALUES (%s, %s, %s, %s, %s)'
@@ -434,15 +448,13 @@ def insertIntoSQL3(myDict, db_name):
     
     mysql_db.commit()
 
-def insertIntoSQL(myDict, db_name, switch):
-    global flaggg1
+def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
     mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
-    if flaggg1 == 0:
+    if firstCall:
         mycursor.execute('DROP TABLE IF EXISTS RATIOS')
-        flaggg1 = 1
         mycursor.execute('CREATE TABLE RATIOS (time_stamp bigint, source_ip bigint, switch VARCHAR(255), ratio decimal(5,3) , total_pkts bigint)')
 
     for ip in myDict:
@@ -453,15 +465,13 @@ def insertIntoSQL(myDict, db_name, switch):
 
     mysql_db.commit()
 
-def insertIntoSQL2(myDict, db_name, switch, interval):
-    global flaggg2
+def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
     mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
-    if flaggg2 == 0:
+    if firstCall:
         mycursor.execute('DROP TABLE IF EXISTS THROUGHPUT')
-        flaggg2 = 1
         mycursor.execute('CREATE TABLE THROUGHPUT (time_in bigint, time_out bigint, source_ip bigint, switch VARCHAR(255), throughput decimal(7,3) )')
 
     for ip in myDict:
@@ -472,15 +482,13 @@ def insertIntoSQL2(myDict, db_name, switch, interval):
 
     mysql_db.commit()
 
-def insertIntoSQL4(myDict, db_name, switch, interval):
-    global flaggg4
+def insertEgressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
     mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
-    if flaggg4 == 0:
+    if firstCall:
         mycursor.execute('DROP TABLE IF EXISTS EGRESSTHROUGHPUT')
-        flaggg4 = 1
         mycursor.execute('CREATE TABLE EGRESSTHROUGHPUT (time_in bigint, time_out bigint, from_switch VARCHAR(255), to_switch VARCHAR(255), throughput decimal(7,3) )')
 
     for to_switch in myDict:
