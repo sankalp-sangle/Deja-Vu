@@ -11,19 +11,25 @@ Flow {{flo.identifier}}
 {% block page_content %}
 
 
-  <div class="row">
-      <h2>Flow {{mapIp[flo.identifier]}}</h2>
-  </div>
 <div class="row">
-    {% for level in lvlToSwitch | sort%}
+    <h2>Flow {{mapIp[flo.identifier]}}</h2>
+</div>
+<div class="row">
+  {% for level in lvlToSwitch | sort%}
     <div class="col-sm-{{ 12 // lvlToSwitch|length }}">
-        <h2>Level {{level}} Switches visited </h2>
+      <h2>Level {{level}} Switches visited </h2>
         <ul>
-            {% for switch in lvlToSwitch[level] %}
-            <li><a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}} {% if trigger_switch == switch %} <b style="color:rgb(255, 42, 42);">(Trigger)</b>{% endif %}</a>
+          {% for switch in lvlToSwitch[level] %}
+            <li>
+              <a href= {{ url_for('displaySwitch', switch=switch) }} >Switch {{switch}} 
+                {% if trigger_switch == switch %} 
+                  <b style="color:rgb(255, 42, 42);">
+                    (Trigger)
+                  </b>
+                {% endif %}
+              </a>
             </li>
-            
-            {% endfor %}
+          {% endfor %}
         </ul>
     </div>
   {% endfor %}
@@ -32,25 +38,25 @@ Flow {{flo.identifier}}
 <div class = "row">
   <div class="col-sm-3 legend">
     <div style="text-align:center;">
-  <form action = "{{url_for('allflows')}}" method="POST">
-    <h2 style="color:white">Detected Flows</h2>
-    {% for choice in choices %}
-    <input type="checkbox" id="{{choice}}" name="{{choice}}" value="{{choice}}" {% if choice == flo.identifier %}
-    checked
-    {% endif %}>
-    <label for="vehicle1" style="color:white"> {{mapIp[choice]}} </label><br>
-    {% endfor %}
-    <input type="submit" value="Compare" id="submitButton">
-  </form>
-</div>
+      <form action = "{{url_for('allflows')}}" method="POST">
+        <h2 style="color:white">Detected Flows</h2>
+        {% for choice in choices %}
+          <input type="checkbox" id="{{choice}}" name="{{choice}}" value="{{choice}}" {% if choice == flo.identifier %}
+          checked
+          {% endif %}>
+          <label for="vehicle1" style="color:white"> {{mapIp[choice]}} </label><br>
+        {% endfor %}
+        <input type="submit" value="Compare" id="submitButton">
+      </form>
+    </div>
 
     <h2 style="color:white">Legend</h2>
     <p style="color:rgb(251, 255, 10);font-weight:bold">Visited</p>
 
     <p style="color:rgb(144,144,168);font-weight:bold">Not visited</p>
-</div>
+  </div>
 
-<style>
+  <style>
     .box{
         width:25px;
         height:25px;
@@ -71,191 +77,154 @@ Flow {{flo.identifier}}
     .black{
         background:#000;
     }
-    </style>
-<div class="col-sm-9">
+  </style>
+  
+  <div class="col-sm-9">
 
-<svg width="960" height="400">
-  <text x="300" y="15" fill="orange" font-weight="bold">IP: {{mapIp[flo.identifier]}}</text>
-</svg>
+    <svg width="960" height="400">
+      <text x="300" y="15" fill="orange" font-weight="bold">IP: {{mapIp[flo.identifier]}}</text>
+    </svg>
 
+  </div>
 </div>
-</div>
+
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
 
-var nodes = {{nodelist|tojson|safe}}
+  // Variable declarations
 
-var links = {{linklist|tojson|safe}}
+  var nodes = {{nodelist|tojson|safe}}
 
-var switches = {{flo.switch_list|tojson|safe}}
+  var links = {{linklist|tojson|safe}}
 
-var times = {{times|tojson|safe}}
+  var switches = {{flo.switch_list|tojson|safe}}
 
-var minTime = {{minLim2|tojson|safe}}
+  var times = {{times|tojson|safe}}
 
-var maxTime = {{maxLim2|tojson|safe}}
+  var minTime = {{minLim2|tojson|safe}}
 
+  var maxTime = {{maxLim2|tojson|safe}}
 
+  var width = 900
 
-function getNeighbors(node) {
-  return links.reduce(function (neighbors, link) {
-      if (link.target.id === node.id) {
-        neighbors.push(link.source.id)
-      } else if (link.source.id === node.id) {
-        neighbors.push(link.target.id)
-      }
-      return neighbors
-    },
-    [node.id]
-  )
-}
+  var height = 600
 
-function isNeighborLink(node, link) {
-  return link.target.id === node.id || link.source.id === node.id
-}
+  // End of variable declarations
 
-function getmylinefunc(line) {
-
-if ( line.target in times && line.source in times ) {
-        return 'orange'
-    }
-return 'rgba(255,255,255,1.0)'
-}
-
-function getmylinefuncstroke(line) {
+  function getmylinefunc(line) {
 
   if ( line.target in times && line.source in times ) {
-        return 6
+          return 'orange'
+      }
+  return 'rgba(255,255,255,1.0)'
+  }
+
+  function getmylinefuncstroke(line) {
+
+    if ( line.target in times && line.source in times ) {
+          return 6
+      }
+  return 2
+
+  }
+
+  function getNodeColor(node, neighbors) {
+    if( node.label in times) return "yellow"
+    return 'gray'
+  }
+
+  var svg = d3.select('svg').attr('width', width).attr('height', height)
+
+  // simulation setup with all forces
+  var linkForce = d3
+    .forceLink()
+    .id(function (link) { return link.id })
+    .distance(function () { return 200 })
+    .strength(function (link) { return 0 })
+
+  var simulation = d3
+    .forceSimulation()
+    .force('link', linkForce)
+
+  var dragDrop = d3.drag().on('start', function (node) {
+    node.fx = node.x
+    node.fy = node.y
+  }).on('drag', function (node) {
+    simulation.alphaTarget(0.1).restart()
+    node.fx = d3.event.x
+    node.fy = d3.event.y
+  }).on('end', function (node) {
+    if (!d3.event.active) {
+      simulation.alphaTarget(0)
     }
-return 2
+    node.fx = null
+    node.fy = null
+  })
 
-}
+  var linkElements = svg.append("g")
+    .attr("class", "links")
+    .selectAll("line")
+    .data(links)
+    .enter().append("line")
+      .attr("stroke-width", getmylinefuncstroke)
+      .attr("stroke", getmylinefunc)
 
-function getNodeColor(node, neighbors) {
-  if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
-    return node.level === 1 ? 'blue' : 'green'
-  }
-  if( node.label in times) return "yellow"
-  return 'gray'
-}
+  var nodeElements = svg.append("g")
+    .attr("class", "nodes")
+    .selectAll("circle")
+    .data(nodes)
+    .enter().append("circle")
+      .attr("r", 20)
+      .attr("fill", getNodeColor)
+      .attr("stroke", "black")
+      .attr("stroke-width", "1")
+      .call(dragDrop)
+      .on("click", function(selectedNode) {
+          location.href = "http://localhost:5000/switches/" + selectedNode.label
+      })
 
-
-function getLinkColor(node, link) {
-  return isNeighborLink(node, link) ? 'green' : '#E5E5E5'
-}
-
-function getTextColor(node, neighbors) {
-  return Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1 ? 'green' : 'black'
-}
-
-var width = 900
-var height = 600
-
-var svg = d3.select('svg')
-svg.attr('width', width).attr('height', height)
-
-// simulation setup with all forces
-var linkForce = d3
-  .forceLink()
-  .id(function (link) { return link.id })
-  .distance(function () { return 200 })
-  .strength(function (link) { return 0 })
-
-var simulation = d3
-  .forceSimulation()
-  .force('link', linkForce)
-
-var dragDrop = d3.drag().on('start', function (node) {
-  node.fx = node.x
-  node.fy = node.y
-}).on('drag', function (node) {
-  simulation.alphaTarget(0.1).restart()
-  node.fx = d3.event.x
-  node.fy = d3.event.y
-}).on('end', function (node) {
-  if (!d3.event.active) {
-    simulation.alphaTarget(0)
-  }
-  node.fx = null
-  node.fy = null
-})
-
-function selectNode(selectedNode) {
-  var neighbors = getNeighbors(selectedNode)
-
-  // we modify the styles to highlight selected nodes
-  nodeElements.attr('fill', function (node) { return getNodeColor(node, neighbors) })
-  textElements.attr('fill', function (node) { return getTextColor(node, neighbors) })
-  linkElements.attr('stroke', function (link) { return getLinkColor(selectedNode, link) })
-}
-
-var linkElements = svg.append("g")
-  .attr("class", "links")
-  .selectAll("line")
-  .data(links)
-  .enter().append("line")
-    .attr("stroke-width", getmylinefuncstroke)
-	  .attr("stroke", getmylinefunc)
-
-var nodeElements = svg.append("g")
-  .attr("class", "nodes")
-  .selectAll("circle")
-  .data(nodes)
-  .enter().append("circle")
-    .attr("r", 20)
-    .attr("fill", getNodeColor)
-    .attr("stroke", "black")
-    .attr("stroke-width", "1")
-    .call(dragDrop)
-    .on("click", function(selectedNode) {
-        location.href = "http://localhost:5000/switches/" + selectedNode.label
-    })
-
-var textElements = svg.append("g")
-  .attr("class", "texts")
-  .selectAll("text")
-  .data(nodes)
-  .enter().append("text")
-    .text(function (node) { return  "S" + node.label })
-    .style("fill", "white")
-    .on("mouseover", function(node) {
-      d3.select(this)
-      .attr("font-size", "20")
-      .style("fill", "orange")
-      .style("text-decoration","underline")
-      .text(d3.select(this).html() + " Level " + node.level)
-    })
-    .on("mouseout", function(node) {
-      d3.select(this)
-      .attr("font-size", "15")
-      .style("fill", "white")
-      .style("text-decoration","")
+  var textElements = svg.append("g")
+    .attr("class", "texts")
+    .selectAll("text")
+    .data(nodes)
+    .enter().append("text")
       .text(function (node) { return  "S" + node.label })
-    })
-	  .attr("font-size", 15)
-	  .attr("dx", 20)
-    .attr("dy", 4)
-    // .on('click', gotoSwitch) //my addition
+      .style("fill", "white")
+      .on("mouseover", function(node) {
+        d3.select(this)
+        .attr("font-size", "20")
+        .style("fill", "orange")
+        .style("text-decoration","underline")
+        .text(d3.select(this).html() + " Level " + node.level)
+      })
+      .on("mouseout", function(node) {
+        d3.select(this)
+        .attr("font-size", "15")
+        .style("fill", "white")
+        .style("text-decoration","")
+        .text(function (node) { return  "S" + node.label })
+      })
+      .attr("font-size", 15)
+      .attr("dx", 20)
+      .attr("dy", 4)
 
+  simulation.nodes(nodes).on('tick', () => {
+    nodeElements
+      .attr('cx', function (node) { return node.x })
+      .attr('cy', function (node) { return node.y })
+    textElements
+      .attr('x', function (node) { return node.x })
+      .attr('y', function (node) { return node.y })
+    linkElements
+      .attr('x1', function (link) { return link.source.x })
+      .attr('y1', function (link) { return link.source.y })
+      .attr('x2', function (link) { return link.target.x })
+      .attr('y2', function (link) { return link.target.y })
+  })
 
-
-simulation.nodes(nodes).on('tick', () => {
-  nodeElements
-    .attr('cx', function (node) { return node.x })
-    .attr('cy', function (node) { return node.y })
-  textElements
-    .attr('x', function (node) { return node.x })
-    .attr('y', function (node) { return node.y })
-  linkElements
-    .attr('x1', function (link) { return link.source.x })
-    .attr('y1', function (link) { return link.source.y })
-    .attr('x2', function (link) { return link.target.x })
-    .attr('y2', function (link) { return link.target.y })
-})
-
-simulation.force("link").links(links)
+  simulation.force("link").links(links)
+  
 </script>
-</div>
 
 {% endblock page_content %}
