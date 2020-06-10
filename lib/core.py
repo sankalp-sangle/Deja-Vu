@@ -197,7 +197,7 @@ class Grafana_Panel:
     DEFAULT_TITLE = "This is a sample panel title!"
     DEFAULT_PANEL_TYPE = "graph"
 
-    def __init__(self, datasource = None, id = None, title = None, panelType = None, gridPos = None, targets = None, xaxis = None, lines = None, points = None, bars = None, stack = None, percentage = None, aliasColors = None):
+    def __init__(self, datasource = None, id = None, title = None, panelType = None, gridPos = None, targets = None, xaxis = None, yaxes = None, lines = None, points = None, bars = None, stack = None, percentage = None, aliasColors = None):
         if datasource is None:
             datasource = Grafana_Panel.DEFAULT_DATASOURCE
         if id is None:
@@ -213,6 +213,8 @@ class Grafana_Panel:
             targets = [Grafana_Target()]
         if xaxis is None:
             xaxis = Grafana_Xaxis()
+        if yaxes is None:
+            yaxes = Grafana_Yaxes()
         if lines is None:
             lines = True
         if points is None:
@@ -233,6 +235,7 @@ class Grafana_Panel:
         self.gridPos = gridPos
         self.targets = targets
         self.xaxis = xaxis
+        self.yaxes = yaxes
         self.lines = lines
         self.points = points
         self.bars = bars
@@ -255,7 +258,7 @@ class Grafana_Panel:
 
     def get_json_string(self):
         targetJSON = self.get_collective_targets_json()
-        return "\"datasource\": \"{}\",\"id\": {},\"title\": \"{}\",\"type\":\"{}\",\"gridPos\":{}, \"targets\": [{}], \"xaxis\": {}, \"lines\": {}, \"points\": {}, \"bars\": {}, \"stack\": {}, \"percentage\": {}, \"aliasColors\": {}".format(self.datasource, self.id, self.title, self.panelType, "{" + self.gridPos.get_json_string() + "}", targetJSON, "{" + self.xaxis.get_json_string() + "}", "true" if self.lines else "false", "true" if self.points else "false","true" if self.bars else "false","true" if self.stack else "false","true" if self.percentage else "false", "{" + self.aliasColors + "}")
+        return "\"datasource\": \"{}\",\"id\": {},\"title\": \"{}\",\"type\":\"{}\",\"gridPos\":{}, \"targets\": [{}], \"xaxis\": {}, \"yaxes\": [{}], \"lines\": {}, \"points\": {}, \"bars\": {}, \"stack\": {}, \"percentage\": {}, \"aliasColors\": {}".format(self.datasource, self.id, self.title, self.panelType, "{" + self.gridPos.get_json_string() + "}", targetJSON, "{" + self.xaxis.get_json_string() + "}", self.yaxes.get_json_string(), "true" if self.lines else "false", "true" if self.points else "false","true" if self.bars else "false","true" if self.stack else "false","true" if self.percentage else "false", "{" + self.aliasColors + "}")
 
 class Grafana_Xaxis:
     '''
@@ -270,6 +273,28 @@ class Grafana_Xaxis:
 
     def get_json_string(self):
         return "\"show\": {}".format("true" if self.showAxis else "false")
+
+class Grafana_Yaxes:
+    '''
+    Refer to comment at top of file for purpose and usage
+    '''
+
+    DEFAULT_FORMAT = "short"
+
+    def __init__(self, leftAxisLabel = None, rightAxisLabel = None, leftAxisFormat = None, rightAxisFormat = None):
+
+        if leftAxisFormat is None:
+            leftAxisFormat = Grafana_Yaxes.DEFAULT_FORMAT
+        if rightAxisFormat is None:
+            rightAxisFormat = Grafana_Yaxes.DEFAULT_FORMAT
+
+        self.leftAxisLabel = leftAxisLabel
+        self.rightAxisLabel = rightAxisLabel
+        self.leftAxisFormat = leftAxisFormat
+        self.rightAxisFormat = rightAxisFormat
+
+    def get_json_string(self):
+        return "{" + "\"label\": {}".format("null" if self.leftAxisLabel == None else "\"" + self.leftAxisLabel + "\"") + "," +  "\"format\":\"{}\"".format(self.leftAxisFormat) + ", \"show\":true},{" + "\"label\": {}".format("null" if self.rightAxisLabel == None else "\"" + self.rightAxisLabel + "\"") + "," +  "\"format\":\"{}\"".format(self.rightAxisFormat) + "," + " \"show\":true}"
 
 class Grafana_Target:
     '''
@@ -590,4 +615,6 @@ class QueryBuilder:
         
         return "select {} as \'time\', {} as metric, {} FROM {} {} {} ORDER BY {}".format("from_unixtime(" + timeComponent + ")", metricComponent, valueComponent, tableComponent, whereComponent, groupByComponent, timeComponent)
 
-        
+# if __name__ == "__main__":
+#     obj = Grafana_Yaxes(leftAxisLabel="packets", leftAxisFormat="Gbits")
+#     print(obj.get_json_string())
