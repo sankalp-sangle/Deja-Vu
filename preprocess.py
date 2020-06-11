@@ -1,3 +1,9 @@
+'''
+This is the preprocessing file intended to be run on a scenario before
+running the web application on that scenario. Please refer to the user
+guide for more information.
+'''
+
 import sys
 import time
 
@@ -71,7 +77,7 @@ def main():
     while right_pointer < len(result_set) and result_set[right_pointer][2] > RIGHT_THRESHOLD * peak_queue_depth:
         right_pointer = right_pointer + 1
 
-    # Ensure haven't gone beyond limits
+    # Ensure you haven't gone beyond limits
     right_pointer = (right_pointer - 1) if right_pointer == len(result_set) else right_pointer
     left_pointer = (left_pointer + 1) if left_pointer == 0 else left_pointer
 

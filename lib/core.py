@@ -3,11 +3,13 @@ from mysql.connector import Error
 
 '''
 Note: For classes prefixed with "Grafana", each class represents a
-component in the JSON model for a Grafana Dashboard. Every such class
-takes specifications for its JSON properties through parameters and
-generates the JSON string using the get_json_string method.
+component in the JSON model for a Grafana Dashboard. Dashboards in
+Grafana are specified using a JSON string sent over HTTP API.
+Every such class takes specifications for its JSON properties 
+through parameters and generates the JSON string representation 
+using the get_json_string method.
 
-Dashboards in Grafana are specified using a JSON string.
+
 For more information on the JSON model for Grafana dashboards, refer:
 https://grafana.com/docs/grafana/latest/reference/dashboard/
 '''
@@ -23,8 +25,13 @@ class Scenario:
     topology_graph : Dictionary, key -> switch ID : str, value -> neibhbouring switch IDs : List
     switch_to_level_mapping : Dictionary, key -> switch ID : str, value -> level of the switch : int
     map_ip : Dictionary, key -> flow source ip : int, value -> human readable source ip : str
-    nodelist : Pending
-    linklist : Pending
+    nodelist : list of dictionarys, each dictionary representing the following properties of a node
+    id, group, label, level, x (coordinate in SVG element in frontend), y (coordinate in SVG element in frontend)
+    List is needed for plotting topology in frontend (requirement of d3.js frontend library)
+    linklist : list of dictionarys, each dictionary representing the following proerties of a link between
+    two nodes 
+    source, target, strength
+    List is needed for plotting topology in frontend (requirement of d3.js frontend library)
     trigger_switch : switch ID of switch that generated the trigger : str
     min_time : earliest time of recording of any p record across all switches : int
     max_time : latest time of recording of any p record across all switches : int
@@ -614,7 +621,3 @@ class QueryBuilder:
         metricComponent += ")"
         
         return "select {} as \'time\', {} as metric, {} FROM {} {} {} ORDER BY {}".format("from_unixtime(" + timeComponent + ")", metricComponent, valueComponent, tableComponent, whereComponent, groupByComponent, timeComponent)
-
-# if __name__ == "__main__":
-#     obj = Grafana_Yaxes(leftAxisLabel="packets", leftAxisFormat="Gbits")
-#     print(obj.get_json_string())

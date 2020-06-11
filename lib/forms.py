@@ -1,5 +1,7 @@
 '''
-Pending
+This file defines forms used in app.py For details on how forms
+are used in Flask, refer to:
+https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-iii-web-forms
 '''
 
 from flask_wtf import FlaskForm

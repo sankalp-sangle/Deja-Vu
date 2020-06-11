@@ -1,3 +1,14 @@
+'''
+This is the main app.py file that is run by the Flask framework.
+It contains all the URL endpoint handler functions as specified in the
+Flask framework.
+For an excellent tutorial on how to use the Flask framework to quickly
+create simple apps, refer to:
+https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world
+Flask documentation:
+https://flask.palletsprojects.com/en/1.1.x/
+'''
+
 import json
 import os
 from collections import deque
@@ -21,7 +32,7 @@ from lib.forms import PacketSearchForm, QueryForm, RandomQuery, SimpleButton
 # Global declarations
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = "Gangadhar hi Shaktimaan hai"
+app.config['SECRET_KEY'] = "Code written by Sankalp Sanjay Sangle, 2016A7TS0110P."
 
 bootstrap = Bootstrap(app)
 
@@ -400,9 +411,14 @@ def bfs(visited, queue):
 
 def getTopologyPositions():
     '''
-    Purpose: Pending
+    Purpose: Populates nodelist and linklist attributes of scenario
+    object. nodelist and linklist attributes are passed on to the
+    front end d3.js library which plots the topology.
     '''
+
     global scenario
+
+    # Starting coordinates in SVG element in front end
     BEGINX = 20
     BEGINY = 70
     nodesAddedToLevel = {}
@@ -410,12 +426,14 @@ def getTopologyPositions():
         nodesAddedToLevel[scenario.switch_to_level_mapping[node]] = []
 
     for node in scenario.topology_graph:
+        # Creating entry for a switch and adding it to nodelist
         nodeEntry = {}
         nodeEntry["id"] = node
         nodeEntry["group"] = "switch"
         nodeEntry["label"] = node
         nodeEntry["level"] = scenario.switch_to_level_mapping[node]
         nodesAddedToLevel[scenario.switch_to_level_mapping[node]].append(node)
+        # Determining x and y positions of switch in SVG element
         nodeEntry["x"] = BEGINX + 200 * len(nodesAddedToLevel[scenario.switch_to_level_mapping[node]])
         nodeEntry["y"] = BEGINY + (3-scenario.switch_to_level_mapping[node]) * 200
         scenario.nodelist.append(nodeEntry)
@@ -423,6 +441,7 @@ def getTopologyPositions():
     links = mysql_manager.execute_query("select * from links")[1:]
 
     for link in links:
+        # Creating entry for a link and adding it to linklist
         linkEntry = {}
         linkEntry["source"] = link[0]
         linkEntry["target"] = link[1]
@@ -471,8 +490,12 @@ def getIPAddressMapping():
 
 def getPanels(mysql_manager, switch):
     '''
-    Purpose: Pending
+    Purpose: This function returns a list of Grafana_Panel objects
+    to be displayed on Grafana. It uses colorMap and 
+    indexOfAvailableColor to ensure consistency of colors applied
+    to metrics in Grafana.
     '''
+
     global scenario
     panelList = []
     colorMap = {}
@@ -515,8 +538,17 @@ def getPanels(mysql_manager, switch):
 
 def getAliasColors(mysql_manager, q, colorMap, indexOfAvailableColour):
     '''
-    Purpose: Pending
+    Purpose: This function assigns colors as they apply to metrics
+    in Grafana. It does this by going through metrics in the query.
+    If the metric has appeared before, it just adds that to aliasColors.
+    If not, it assigns the metric the next available colour from colorMap
+    and then adds that to aliasColors. Finally it returns 3 entities:
+    the formed aliasColors, updated indexOfAvailableColour, updated colorMap.
+
+    To understand metrics in Grafana, refer to:
+    https://grafana.com/docs/grafana/latest/features/datasources/mysql/#select-table-time-column-and-metric-column-from
     '''    
+
     result_set = mysql_manager.execute_query(q)[1:]
     metricSet = set([row[1] for row in result_set])
     aliasColors = ""
