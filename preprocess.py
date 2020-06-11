@@ -164,7 +164,7 @@ def main():
     # Add a MySQL datasource to Grafana
     data_source = Grafana_Datasource(name=DATABASE, database_type="mysql", database=DATABASE)
     json_body = "{ " + data_source.get_json_string() + " }"
-    response = requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
+    requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
 
 def writeConclusion(normalizedJIndex, result_file):
     if normalizedJIndex > 0.7:
