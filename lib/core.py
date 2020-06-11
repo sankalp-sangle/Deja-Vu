@@ -1,6 +1,8 @@
 import mysql.connector
 from mysql.connector import Error
 
+from lib.config import MYSQL_USER, MYSQL_PASSWORD
+
 '''
 Note: For classes prefixed with "Grafana", each class represents a
 component in the JSON model for a Grafana Dashboard. Dashboards in
@@ -63,8 +65,8 @@ class Grafana_Datasource:
     DEFAULT_NAME = "No name given"
     DEFAULT_TYPE = "mysql"
     DEFAULT_DATABASE = "No name given to database"
-    DEFAULT_USER = "sankalp"
-    DEFAULT_PASSWORD = "sankalp"
+    DEFAULT_USER = MYSQL_USER
+    DEFAULT_PASSWORD = MYSQL_PASSWORD
         
     def __init__(self, name = None, database_type = None, database = None, user = None, password = None):
         if name is None:

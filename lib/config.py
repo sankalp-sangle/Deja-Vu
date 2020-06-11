@@ -3,8 +3,10 @@ This file contains configuration variables used by app.py
 and preprocess.py
 '''
 
-# The name of the database in MySQL instance that is to be accessed.
-DATABASE = "microburst_incast_heavyhitter1"
+# The data related to MySQL instance that is to be accessed.
+DATABASE = "microburst_incast_heavyhitter5"
+MYSQL_USER = "sankalp"
+MYSQL_PASSWORD = "sankalp"
 
 # IP address of the server hosting Grafana
 HOST            = "localhost"
