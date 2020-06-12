@@ -89,7 +89,7 @@ def main():
     print("\nLeft time: {} Right time: {} Time difference: {} microseconds".format(str(left_time), str(right_time), str(width_of_peak/1000)))
 
     result_file = open('result.txt', 'w')
-    result_file.write("For " + DATABASE + "\n,")
+    result_file.write(DATABASE + "\n,")
 
     if width_of_peak > MAX_WIDTH:
         result_file.write("CONCLUDE: Time Gap is of the order of milliseconds. Probably underprovisioned network.")
