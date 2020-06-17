@@ -49,5 +49,5 @@ RIGHT_THRESHOLD = 0.5
 INTERVAL = 100000 # Nanoseconds
 
 # Queries to be run during preprocessing to ensure no bogus p-records
-CLEANUP_QUERIES = ['set SQL_SAFE_UPDATES = 0', 'delete from packetrecords where time_in = 0', 'delete from packetrecords where source_ip = 1543569666']
+CLEANUP_QUERIES = ['set SQL_SAFE_UPDATES = 0', 'delete from packetrecords where time_in = 0', 'delete from packetrecords where source_ip = 1543569666', 'delete from packetrecords where hash = 0']
 
