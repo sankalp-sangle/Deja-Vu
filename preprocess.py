@@ -416,7 +416,7 @@ def getRatioTimeSeries(mysql_manager, switch, scenario, firstCall):
 def getPaths(mysql_manager, scenario):
     myDict = {}
 
-    result_set = mysql_manager.execute_query("select time_in, time_out, switch, hash from packetrecords order by hash, time_in")[1:]
+    result_set = mysql_manager.execute_query("select time_in, time_out, switch, hash, source_ip from packetrecords order by hash, time_in")[1:]
 
     i = 0
 
@@ -425,6 +425,7 @@ def getPaths(mysql_manager, scenario):
         rowList = []
         currRow = result_set[i]
         currHash = currRow[3]
+        currIp = currRow[4]
         j = i
         while j < len(result_set) and result_set[j][3] == currHash:
             rowList.append(result_set[j])
@@ -442,7 +443,7 @@ def getPaths(mysql_manager, scenario):
             link = str(fromSwitch) + "-" + str(toSwitch)
             if link not in myDict:
                 myDict[link] = []
-            myDict[link].append([rowList[k][1], rowList[k+1][0], currHash])
+            myDict[link].append([rowList[k][1], rowList[k+1][0], currHash, currIp])
 
     print("Inserting Paths")
     insertPathsIntoMySQL(myDict, scenario)
@@ -453,12 +454,12 @@ def insertPathsIntoMySQL(myDict, db_name):
     mycursor.execute("use " + db_name)
 
     mycursor.execute('DROP TABLE IF EXISTS LINKMAPS')
-    mycursor.execute('CREATE TABLE LINKMAPS (time_enter bigint, time_exit bigint, from_switch VARCHAR(255), to_switch VARCHAR(255), hash bigint )')
+    mycursor.execute('CREATE TABLE LINKMAPS (time_enter bigint, time_exit bigint, from_switch VARCHAR(255), to_switch VARCHAR(255), hash bigint , source_ip bigint)')
 
     for link in myDict:
-        query = 'INSERT INTO LINKMAPS (time_enter, time_exit, from_switch, to_switch, hash) VALUES (%s, %s, %s, %s, %s)'
-        for [time_enter, time_exit, packetHash] in myDict[link]:
-            val = (time_enter, time_exit, link.split("-")[0], link.split("-")[1], packetHash)
+        query = 'INSERT INTO LINKMAPS (time_enter, time_exit, from_switch, to_switch, hash, source_ip) VALUES (%s, %s, %s, %s, %s, %s)'
+        for [time_enter, time_exit, packetHash, source_ip] in myDict[link]:
+            val = (time_enter, time_exit, link.split("-")[0], link.split("-")[1], packetHash, source_ip)
             mycursor.execute(query, val)
     
     mysql_db.commit()

@@ -216,7 +216,13 @@ def displayFlow(flow):
     for row in res:
         times[row[0]] = int(row[1])
 
-    return render_template('flowinfo.html', mapIp=scenario.map_ip, flo = scenario.flow_arr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=scenario.nodelist, linklist=scenario.linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices)
+    links_to_be_highlighted = {}
+    res = g.mysql_manager.execute_query("select distinct concat(from_switch, '-', to_switch) from linkmaps where source_ip=\'" + flow + "\'")[1:]
+    
+    for row in res:
+        links_to_be_highlighted[row[0]] = "yes"
+
+    return render_template('flowinfo.html', levels = scenario.switch_to_level_mapping, mapIp=scenario.map_ip, flo = scenario.flow_arr[int(flow)], lvlToSwitch=lvlToSwitch, nodelist=scenario.nodelist, linklist=scenario.linklist, times=times, maxLim=maxLim, minLim = minLim, minLim2 = minLim2, maxLim2=maxLim2, choices = choices, links_to_be_highlighted = links_to_be_highlighted)
 
 @app.route('/flows')
 def flows():

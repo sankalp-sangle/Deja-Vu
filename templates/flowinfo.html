@@ -94,6 +94,8 @@ Flow {{flo.identifier}}
 
   // Variable declarations
 
+  var levels = {{levels|tojson|safe}}
+
   var nodes = {{nodelist|tojson|safe}}
 
   var links = {{linklist|tojson|safe}}
@@ -110,21 +112,24 @@ Flow {{flo.identifier}}
 
   var height = 600
 
+  var links_to_be_highlighted = {{links_to_be_highlighted|tojson|safe}}
+
   // End of variable declarations
 
   function getmylinefunc(line) {
 
-  if ( line.target in times && line.source in times ) {
+  if ( line.source + "-" + line.target in links_to_be_highlighted) {
           return 'orange'
-      }
+  }
+
   return 'rgba(255,255,255,1.0)'
   }
 
   function getmylinefuncstroke(line) {
 
-    if ( line.target in times && line.source in times ) {
-          return 6
-      }
+    if ( line.source + "-" + line.target in links_to_be_highlighted) {
+          return 4
+    }
   return 2
 
   }
@@ -162,6 +167,28 @@ Flow {{flo.identifier}}
     node.fy = null
   })
 
+  var linecounter = 0
+
+  function getY(id) {
+    var iterator = 0
+    for(iterator = 0; iterator < nodes.length; iterator++) {
+      if(nodes[iterator].id == id) {
+        return nodes[iterator].y
+      }
+    }
+    return -1
+  }
+
+  function getX(id) {
+    var iterator = 0
+    for(iterator = 0; iterator < nodes.length; iterator++) {
+      if(nodes[iterator].id == id) {
+        return nodes[iterator].x
+      }
+    }
+    return -1
+  }
+
   var linkElements = svg.append("g")
     .attr("class", "links")
     .selectAll("line")
@@ -169,6 +196,22 @@ Flow {{flo.identifier}}
     .enter().append("line")
       .attr("stroke-width", getmylinefuncstroke)
       .attr("stroke", getmylinefunc)
+      .attr("marker-end", function(line) {
+        var mrkr = svg.append("defs").append("marker")
+        .attr("id", "arrowhead" + linecounter)
+        .attr("markerWidth","20")
+        .attr("markerHeight", "14")
+        .attr("markerUnits", "userSpaceOnUse")
+        .attr("refX", 0.3 * Math.sqrt ( Math.pow(getY(line.source) - getY(line.target), 2) + Math.pow(getX(line.source) - getX(line.target), 2) ) )
+        .attr("refY", 7)
+        .attr("orient", "auto")
+        .attr("style", "fill:gold; stroke:black; stroke-width:1")
+        .append("polygon")
+        .attr("points", "0 0, 20 7, 0 14, 4 7")
+        linecounter += 1
+        return "url(#arrowhead" + (linecounter-1) + ")"
+      })
+      
 
   var nodeElements = svg.append("g")
     .attr("class", "nodes")
@@ -209,7 +252,7 @@ Flow {{flo.identifier}}
       .attr("dx", 20)
       .attr("dy", 4)
 
-  simulation.nodes(nodes).on('tick', () => {
+      simulation.nodes(nodes).on('tick', () => {
     nodeElements
       .attr('cx', function (node) { return node.x })
       .attr('cy', function (node) { return node.y })
@@ -217,10 +260,27 @@ Flow {{flo.identifier}}
       .attr('x', function (node) { return node.x })
       .attr('y', function (node) { return node.y })
     linkElements
-      .attr('x1', function (link) { return link.source.x })
-      .attr('y1', function (link) { return link.source.y })
-      .attr('x2', function (link) { return link.target.x })
-      .attr('y2', function (link) { return link.target.y })
+      .attr('x1', function (link) { 
+        // console.log(link);
+        if( levels[link.source.id] < levels[link.target.id])
+          return link.source.x - 10
+        else return link.source.x + 10
+        })
+      .attr('y1', function (link) { 
+      if( levels[link.source.id] < levels[link.target.id])
+        return link.source.y
+      else return link.source.y
+    })
+      .attr('x2', function (link) { 
+        if( levels[link.source.id] < levels[link.target.id])
+          return link.target.x - 10
+        else return link.target.x + 10
+      })
+      .attr('y2', function (link) {
+      if( levels[link.source.id] < levels[link.target.id])
+        return link.target.y
+      else return link.target.y
+      })
   })
 
   simulation.force("link").links(links)
