@@ -165,8 +165,7 @@ def main():
     # Add a MySQL datasource to Grafana
     data_source = Grafana_Datasource(name=DATABASE, database_type="mysql", database=DATABASE)
     json_body = "{ " + data_source.get_json_string() + " }"
-    resp = requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
-    print(resp)
+    requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
 
 def writeConclusion(normalizedJIndex, result_file):
     if normalizedJIndex > 0.7:
@@ -450,7 +449,7 @@ def getPaths(mysql_manager, scenario):
     insertPathsIntoMySQL(myDict, scenario)
 
 def insertPathsIntoMySQL(myDict, db_name):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -466,7 +465,7 @@ def insertPathsIntoMySQL(myDict, db_name):
     mysql_db.commit()
 
 def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -483,7 +482,7 @@ def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
     mysql_db.commit()
 
 def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -500,7 +499,7 @@ def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCal
     mysql_db.commit()
 
 def insertEgressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 

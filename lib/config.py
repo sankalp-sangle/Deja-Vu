@@ -4,9 +4,9 @@ and preprocess.py
 '''
 
 # The data related to MySQL instance that is to be accessed.
-DATABASE = "microburst_incast_heavyhitter5"
+DATABASE = "microburst_incast_heavyhitter1"
 MYSQL_USER = "sankalp"
-MYSQL_PASSWORD = "sankalp123"
+MYSQL_PASSWORD = "sankalp"
 
 # IP address of the server hosting Grafana
 HOST            = "localhost"
@@ -18,7 +18,7 @@ DATASOURCE_URL  = "http://" + HOST + ":3000/api/datasources"
 
 # Grafana API key, sent along with requests to Grafana.
 # Inserted into headers of HTTP request as shown below.
-API_KEY         = "eyJrIjoiNnlCUmVBVnNMQUlGV1c3UlAyWXFRMUNuWTFEVWdqWEUiLCJuIjoiYWFhIiwiaWQiOjF9"
+API_KEY         = "eyJrIjoiOFpNbWpUcGRPY3p2eVpTT0Iza0F5VzdNU3hJcmZrSVIiLCJuIjoibXlLZXkyIiwiaWQiOjF9"
 
 # HTTP headers used for communication with Grafana server
 headers = {

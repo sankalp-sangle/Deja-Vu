@@ -22,7 +22,8 @@ from mysql.connector import Error
 
 from lib.config import (ANNOTATIONS_URL, API_KEY, COLORS, DATABASE,
                         DATASOURCE_URL, HOST, MAX_LEGAL_UNIX_TIMESTAMP,
-                        UNIX_TIME_START_YEAR, URL, YEAR_SEC, headers, MYSQL_PASSWORD, MYSQL_USER)
+                        MYSQL_PASSWORD, MYSQL_USER, UNIX_TIME_START_YEAR, URL,
+                        YEAR_SEC, headers)
 from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Grid_Position, Grafana_Panel, Grafana_Target,
                       Grafana_Time, Grafana_Yaxes, MySQL_Manager, QueryBuilder,
@@ -116,7 +117,7 @@ def displaySwitch(switch):
             
             payload = getFinalPayload(dashboard)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
-            print(response)
+
             dashboardUId = response.json()['uid']
             dashboardId = response.json()['id']
 

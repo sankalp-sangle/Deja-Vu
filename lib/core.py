@@ -374,9 +374,9 @@ class MySQL_Manager:
     '''
 
     DEFAULT_HOST = 'localhost'
-    DEFAULT_DATABASE = 'netplay'
-    DEFAULT_USER = 'sankalp'
-    DEFAULT_PASSWORD = 'sankalp'
+    DEFAULT_DATABASE = 'No database assigned'
+    DEFAULT_USER = 'root'
+    DEFAULT_PASSWORD = 'root123'
 
     def __init__(self, connector = None, host = None, database = None, user = None, password = None):
         if host is None:

@@ -14,6 +14,8 @@ import json
 import mysql.connector
 from pcapfile import savefile
 
+from lib.config import MYSQL_PASSWORD, MYSQL_USER
+
 # NetPlay libraries
 from load_modules.switch import switch
 from load_modules.link import link
@@ -213,7 +215,7 @@ stat_name2 = "link_utilization"
 stat_size = 32
 
 def pushMySql(db_name):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     try:
         mycursor.execute("DROP DATABASE " + db_name)
