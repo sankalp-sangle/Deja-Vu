@@ -15,7 +15,7 @@ from lib.config import (ANNOTATIONS_URL, API_KEY, CLEANUP_QUERIES, COLORS,
                         DATABASE, DATASOURCE_URL, HOST, INTERVAL,
                         LEFT_THRESHOLD, MAX_LEGAL_UNIX_TIMESTAMP, MAX_WIDTH,
                         RIGHT_THRESHOLD, UNIX_TIME_START_YEAR, URL, YEAR_SEC,
-                        headers)
+                        headers, MYSQL_USER, MYSQL_PASSWORD)
 from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Datasource, Grafana_Grid_Position, Grafana_Panel,
                       Grafana_Target, Grafana_Time, MySQL_Manager,
@@ -24,7 +24,7 @@ from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
 
 def main():
 
-    mysql_manager = MySQL_Manager(database=DATABASE)
+    mysql_manager = MySQL_Manager(database=DATABASE, user=MYSQL_USER, password=MYSQL_PASSWORD)
 
     for query in CLEANUP_QUERIES:
         mysql_manager.execute_query(query)
@@ -147,12 +147,12 @@ def main():
     # Re-establish connection since will now be accessing a table that
     # was newly created, hence schema in connection object needs to be 
     # updated.
-    mysql_manager = MySQL_Manager(database=DATABASE)
+    mysql_manager = MySQL_Manager(database=DATABASE,user=MYSQL_USER, password=MYSQL_PASSWORD)
 
     # Calculation of Egress throughputs
     firstCall = True
     for switch in switch_map:
-        result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch_map[switch].identifier + "'")
+        result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from LINKMAPS where from_switch = '"+ switch_map[switch].identifier + "'")
         left_cutoff = result_set[1:][0][0]
         right_cutoff = result_set[1:][0][1]
         if left_cutoff == None or right_cutoff == None:
@@ -165,7 +165,8 @@ def main():
     # Add a MySQL datasource to Grafana
     data_source = Grafana_Datasource(name=DATABASE, database_type="mysql", database=DATABASE)
     json_body = "{ " + data_source.get_json_string() + " }"
-    requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
+    resp = requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
+    print(resp)
 
 def writeConclusion(normalizedJIndex, result_file):
     if normalizedJIndex > 0.7:
@@ -320,7 +321,7 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario, 
     passed on to insert function.
     '''
     
-    result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from linkmaps where from_switch = '"+ switch + "'")
+    result_set = mysql_manager.execute_query("select min(time_exit), max(time_exit) from LINKMAPS where from_switch = '"+ switch + "'")
     
     left_cutoff = result_set[1:][0][0]
     right_cutoff = result_set[1:][0][1]
@@ -331,7 +332,7 @@ def getInstantaneousEgressThroughputTimeSeries(mysql_manager, switch, scenario, 
 
     timeL, timeR = left_cutoff, left_cutoff + INTERVAL
 
-    result_set = mysql_manager.execute_query("select to_switch, time_exit from linkmaps where from_switch = '" + switch + "' order by time_exit")[1:]
+    result_set = mysql_manager.execute_query("select to_switch, time_exit from LINKMAPS where from_switch = '" + switch + "' order by time_exit")[1:]
     
     currIndex = 0
 
@@ -449,7 +450,7 @@ def getPaths(mysql_manager, scenario):
     insertPathsIntoMySQL(myDict, scenario)
 
 def insertPathsIntoMySQL(myDict, db_name):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -465,7 +466,7 @@ def insertPathsIntoMySQL(myDict, db_name):
     mysql_db.commit()
 
 def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -482,7 +483,7 @@ def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
     mysql_db.commit()
 
 def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -499,7 +500,7 @@ def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCal
     mysql_db.commit()
 
 def insertEgressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 

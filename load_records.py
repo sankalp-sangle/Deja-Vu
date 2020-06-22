@@ -213,7 +213,7 @@ stat_name2 = "link_utilization"
 stat_size = 32
 
 def pushMySql(db_name):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp")
+    mysql_db = mysql.connector.connect(host="0.0.0.0", user="sankalp", passwd="sankalp123")
     mycursor = mysql_db.cursor()
     try:
         mycursor.execute("DROP DATABASE " + db_name)

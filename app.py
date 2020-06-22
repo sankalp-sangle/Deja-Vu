@@ -22,7 +22,7 @@ from mysql.connector import Error
 
 from lib.config import (ANNOTATIONS_URL, API_KEY, COLORS, DATABASE,
                         DATASOURCE_URL, HOST, MAX_LEGAL_UNIX_TIMESTAMP,
-                        UNIX_TIME_START_YEAR, URL, YEAR_SEC, headers)
+                        UNIX_TIME_START_YEAR, URL, YEAR_SEC, headers, MYSQL_PASSWORD, MYSQL_USER)
 from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Grid_Position, Grafana_Panel, Grafana_Target,
                       Grafana_Time, Grafana_Yaxes, MySQL_Manager, QueryBuilder,
@@ -38,7 +38,7 @@ bootstrap = Bootstrap(app)
 
 scenario = Scenario()
 
-mysql_manager = MySQL_Manager(database=DATABASE)
+mysql_manager = MySQL_Manager(database=DATABASE,user=MYSQL_USER, password=MYSQL_PASSWORD)
 
 # End of Global declarations
 
@@ -116,6 +116,7 @@ def displaySwitch(switch):
             
             payload = getFinalPayload(dashboard)
             response = requests.request("POST", url=URL, headers=headers, data = payload)
+            print(response)
             dashboardUId = response.json()['uid']
             dashboardId = response.json()['id']
 
@@ -268,7 +269,7 @@ def before_request():
     '''
     Code in this function is run before every request
     '''
-    g.mysql_manager = MySQL_Manager(database=DATABASE)
+    g.mysql_manager = MySQL_Manager(database=DATABASE,user=MYSQL_USER, password=MYSQL_PASSWORD)
 
 @app.route('/topo')
 def topo():
@@ -278,7 +279,7 @@ def topo():
 def general():
 
     throughputlimits = {}
-    res3 = g.mysql_manager.execute_query('select from_switch, to_switch, min(time_out), max(time_out) from egressthroughput group by 1,2')[1:]
+    res3 = g.mysql_manager.execute_query('select from_switch, to_switch, min(time_out), max(time_out) FROM EGRESSTHROUGHPUT group by 1,2')[1:]
     for row in res3:
         entry = {}
         entry['min'] = row[2]
@@ -286,7 +287,7 @@ def general():
         throughputlimits[str(row[0]) + "-" + str(row[1])] = entry
 
 
-    res = g.mysql_manager.execute_query('select time_out, from_switch, to_switch, throughput, time_in from egressthroughput order by time_out')[1:]
+    res = g.mysql_manager.execute_query('select time_out, from_switch, to_switch, throughput, time_in FROM EGRESSTHROUGHPUT order by time_out')[1:]
     throughput = {}
     for row in res:
         if str(row[1]) + "-" + str(row[2]) in throughput:
@@ -326,8 +327,8 @@ def general():
         entry['max'] = row[2]
         limits[row[0]] = entry
 
-    res1 = g.mysql_manager.execute_query('select min(time_out) from egressthroughput')[1:]
-    res2 = g.mysql_manager.execute_query('select max(time_out) from egressthroughput')[1:]
+    res1 = g.mysql_manager.execute_query('select min(time_out) FROM EGRESSTHROUGHPUT')[1:]
+    res2 = g.mysql_manager.execute_query('select max(time_out) FROM EGRESSTHROUGHPUT')[1:]
     
     minLim = str(res1[0][0])
     maxLim = str(res2[0][0])
