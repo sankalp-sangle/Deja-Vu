@@ -513,19 +513,19 @@ def getPanels(mysql_manager, switch):
 
     indexOfAvailableColour = 0
     
-    q1 = QueryBuilder(time_column = "time_stamp * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value= 'ratio', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    q1 = QueryBuilder(time_column = "time_stamp * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value= 'ratio', metricList = ['switch', 'source_ip'],  table='RATIOS', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q1, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=18), title="Relative ratios of packets for each flow at Switch " + switch, targets = [Grafana_Target(rawSql=q1)], datasource=DATABASE, aliasColors=aliasColors))
     
-    q2 = QueryBuilder(time_column = "time_stamp * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value= 'ratio*total_pkts', metricList = ['switch', 'source_ip'],  table='ratios', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    q2 = QueryBuilder(time_column = "time_stamp * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value= 'ratio*total_pkts', metricList = ['switch', 'source_ip'],  table='RATIOS', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q2, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=9), title="Distribution of queue at Switch " + switch, targets = [Grafana_Target(rawSql=q2)], datasource=DATABASE, yaxes = Grafana_Yaxes(leftAxisLabel="Queue Depth"), lines = False, bars = True, stack = True, percentage = False, aliasColors=aliasColors))
 
-    q3 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['from_switch','to_switch'], table='egressthroughput', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query()
+    q3 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['from_switch','to_switch'], table='EGRESSTHROUGHPUT', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q3, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=27),title="Instantaneous Egress Throughput at Switch " + switch, targets = [Grafana_Target(rawSql=q3)], datasource=DATABASE,yaxes = Grafana_Yaxes(leftAxisLabel="Egress Throughput", leftAxisFormat="Gbits"), aliasColors=aliasColors))
 
-    q9 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['from_switch','to_switch'], table='egressthroughput', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query()
+    q9 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['from_switch','to_switch'], table='EGRESSTHROUGHPUT', isConditional=True, conditionalClauseList=['from_switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q9, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=27),title="Stacked Instantaneous Egress Throughput at Switch " + switch, targets = [Grafana_Target(rawSql=q9)], datasource=DATABASE,yaxes = Grafana_Yaxes(leftAxisLabel="Egress Throughput", leftAxisFormat="Gbits"), lines = False, bars = True, stack = True, percentage = False, aliasColors=aliasColors))
 
@@ -537,11 +537,11 @@ def getPanels(mysql_manager, switch):
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q6, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=9),title="Queue Depth at Switch " + switch, targets = [Grafana_Target(rawSql=q6)], datasource=DATABASE, yaxes = Grafana_Yaxes(leftAxisLabel="Queue Depth"), aliasColors=aliasColors))
 
-    q7 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['switch', 'source_ip'], table='throughput', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    q7 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['switch', 'source_ip'], table='THROUGHPUT', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q7, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=12,y=0),title="Instantaneous Ingress Throughput at Switch " + switch, targets = [Grafana_Target(rawSql=q7)], datasource=DATABASE, yaxes = Grafana_Yaxes(leftAxisLabel="Ingress Throughput", leftAxisFormat="Gbits"), aliasColors=aliasColors))
     
-    q8 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['switch', 'source_ip'], table='throughput', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
+    q8 = QueryBuilder(time_column = "time_in * " + str(MAX_LEGAL_UNIX_TIMESTAMP) + " / " + str(scenario.max_time), value = 'throughput', metricList = ['switch', 'source_ip'], table='THROUGHPUT', isConditional=True, conditionalClauseList=['switch = \'' + str(switch) + '\'']).get_generic_query()
     aliasColors, indexOfAvailableColour, colorMap = getAliasColors(mysql_manager, q8, colorMap, indexOfAvailableColour)
     panelList.append(Grafana_Panel(gridPos=Grafana_Grid_Position(x=0,y=0),title="Stacked Instantaneous Ingress Throughput at Switch " + switch, targets = [Grafana_Target(rawSql=q8)], datasource=DATABASE, yaxes = Grafana_Yaxes(leftAxisLabel="Ingress Throughput", leftAxisFormat="Gbits"), lines = False, bars = True, stack = True, percentage = False, aliasColors=aliasColors))
 
