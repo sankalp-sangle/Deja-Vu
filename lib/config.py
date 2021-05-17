@@ -3,29 +3,18 @@ This file contains configuration variables used by app.py
 and preprocess.py
 '''
 
-# The data related to MySQL instance that is to be accessed.
-DATABASE = "microburst_incast_heavyhitter1"
-MYSQL_USER = "sankalp"
-MYSQL_PASSWORD = "sankalp"
+# The credentials for MySQL instance that is to be accessed.
+MYSQL_USER = "root"
+MYSQL_PASSWORD = "root123"
 
 # IP address of the server hosting Grafana
-HOST            = "localhost"
+HOST            = "grafana-server"
 
 # URLs used in communicating with Grafana HTTP API
 URL             = "http://" + HOST + ":3000/api/dashboards/db"
 ANNOTATIONS_URL = "http://" + HOST + ":3000/api/annotations"
 DATASOURCE_URL  = "http://" + HOST + ":3000/api/datasources"
-
-# Grafana API key, sent along with requests to Grafana.
-# Inserted into headers of HTTP request as shown below.
-API_KEY         = "eyJrIjoiOFpNbWpUcGRPY3p2eVpTT0Iza0F5VzdNU3hJcmZrSVIiLCJuIjoibXlLZXkyIiwiaWQiOjF9"
-
-# HTTP headers used for communication with Grafana server
-headers = {
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
-  'Authorization': 'Bearer ' + API_KEY
-}
+API_KEY_URL     = "http://" + HOST + ":3000/api/auth/keys"
 
 # Constants used in setting time in Grafana dashboards
 YEAR_SEC = 31556926

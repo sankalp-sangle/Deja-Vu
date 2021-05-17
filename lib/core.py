@@ -87,7 +87,7 @@ class Grafana_Datasource:
         self.password = password
 
     def get_json_string(self):
-        return "\"name\": \"{}\", \"type\": \"{}\", \"url\":\"\", \"access\":\"proxy\", \"database\":\"{}\",\"user\":\"{}\", \"password\": \"{}\", \"basicAuth\":false".format(self.name, self.database_type, self.database, self.user, self.password)
+        return "\"name\": \"{}\", \"type\": \"{}\", \"url\":\"mysql-server:3306\", \"access\":\"proxy\", \"database\":\"{}\",\"user\":\"{}\", \"password\": \"{}\", \"basicAuth\":false".format(self.name, self.database_type, self.database, self.user, self.password)
         
 
         
@@ -373,7 +373,7 @@ class MySQL_Manager:
     and execute queries.
     '''
 
-    DEFAULT_HOST = 'localhost'
+    DEFAULT_HOST = 'mysql-server'
     DEFAULT_DATABASE = 'No database assigned'
     DEFAULT_USER = 'root'
     DEFAULT_PASSWORD = 'root123'

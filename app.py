@@ -11,6 +11,7 @@ https://flask.palletsprojects.com/en/1.1.x/
 
 import json
 import os
+import sys
 from collections import deque
 
 import mysql.connector
@@ -20,10 +21,9 @@ from flask import (Flask, g, redirect, render_template, request, session,
 from flask_bootstrap import Bootstrap
 from mysql.connector import Error
 
-from lib.config import (ANNOTATIONS_URL, API_KEY, COLORS, DATABASE,
-                        DATASOURCE_URL, HOST, MAX_LEGAL_UNIX_TIMESTAMP,
-                        MYSQL_PASSWORD, MYSQL_USER, UNIX_TIME_START_YEAR, URL,
-                        YEAR_SEC, headers)
+from lib.config import (ANNOTATIONS_URL, API_KEY_URL, COLORS, DATASOURCE_URL,
+                        HOST, MAX_LEGAL_UNIX_TIMESTAMP, MYSQL_PASSWORD,
+                        MYSQL_USER, UNIX_TIME_START_YEAR, URL, YEAR_SEC)
 from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Grid_Position, Grafana_Panel, Grafana_Target,
                       Grafana_Time, Grafana_Yaxes, MySQL_Manager, QueryBuilder,
@@ -39,7 +39,12 @@ bootstrap = Bootstrap(app)
 
 scenario = Scenario()
 
+DATABASE = sys.argv[1]
+
 mysql_manager = MySQL_Manager(database=DATABASE,user=MYSQL_USER, password=MYSQL_PASSWORD)
+
+headers = {}
+API_KEY = ""
 
 # End of Global declarations
 
@@ -607,10 +612,23 @@ def generateScenarioData():
 
 if __name__ == "__main__":
 
+    #Fetch the API key for communication with Grafana
+    result = requests.request("POST", url=API_KEY_URL, headers={"Content-Type": "application/json"}, data = "{\"role\":\"Admin\",\"name\":\"app_test_key_" + DATABASE + "\"}").json()
+    API_KEY = result['key']
+
+    # HTTP headers used for communication with Grafana server
+    headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + API_KEY
+    }
+
     generateScenarioData()
     generateTopologyGraph()
     getSwitchToLevelMapping()
     getIPAddressMapping()
     getTopologyPositions()
 
-    app.run(debug=True)
+    
+
+    app.run(host="0.0.0.0")

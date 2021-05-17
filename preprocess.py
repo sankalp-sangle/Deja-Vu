@@ -11,11 +11,11 @@ import mysql.connector
 import requests
 from mysql.connector import Error
 
-from lib.config import (ANNOTATIONS_URL, API_KEY, CLEANUP_QUERIES, COLORS,
-                        DATABASE, DATASOURCE_URL, HOST, INTERVAL,
-                        LEFT_THRESHOLD, MAX_LEGAL_UNIX_TIMESTAMP, MAX_WIDTH,
-                        RIGHT_THRESHOLD, UNIX_TIME_START_YEAR, URL, YEAR_SEC,
-                        headers, MYSQL_USER, MYSQL_PASSWORD)
+from lib.config import (ANNOTATIONS_URL, API_KEY_URL, CLEANUP_QUERIES, COLORS,
+                        DATASOURCE_URL, HOST, INTERVAL, LEFT_THRESHOLD,
+                        MAX_LEGAL_UNIX_TIMESTAMP, MAX_WIDTH, MYSQL_PASSWORD,
+                        MYSQL_USER, RIGHT_THRESHOLD, UNIX_TIME_START_YEAR, URL,
+                        YEAR_SEC)
 from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
                       Grafana_Datasource, Grafana_Grid_Position, Grafana_Panel,
                       Grafana_Target, Grafana_Time, MySQL_Manager,
@@ -23,7 +23,7 @@ from lib.core import (Flow, Grafana_Dashboard, Grafana_Dashboard_Properties,
 
 
 def main():
-
+    DATABASE = sys.argv[1]
     mysql_manager = MySQL_Manager(database=DATABASE, user=MYSQL_USER, password=MYSQL_PASSWORD)
 
     for query in CLEANUP_QUERIES:
@@ -165,6 +165,17 @@ def main():
     # Add a MySQL datasource to Grafana
     data_source = Grafana_Datasource(name=DATABASE, database_type="mysql", database=DATABASE)
     json_body = "{ " + data_source.get_json_string() + " }"
+    
+    resp = requests.request("POST", url=API_KEY_URL, headers={"Content-Type": "application/json"}, data = "{\"role\":\"Admin\",\"name\":\"preprocess_test_key_" + DATABASE + "\"}").json()
+    API_KEY = resp['key']
+
+    # HTTP headers used for communication with Grafana server
+    headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + API_KEY
+    }
+    
     requests.request("POST", url=DATASOURCE_URL, headers=headers, data = json_body)
 
 def writeConclusion(normalizedJIndex, result_file):
@@ -449,7 +460,7 @@ def getPaths(mysql_manager, scenario):
     insertPathsIntoMySQL(myDict, scenario)
 
 def insertPathsIntoMySQL(myDict, db_name):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
+    mysql_db = mysql.connector.connect(host="mysql-server", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -465,7 +476,7 @@ def insertPathsIntoMySQL(myDict, db_name):
     mysql_db.commit()
 
 def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
+    mysql_db = mysql.connector.connect(host="mysql-server", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -482,7 +493,7 @@ def insertRatiosIntoMySQL(myDict, db_name, switch, firstCall):
     mysql_db.commit()
 
 def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
+    mysql_db = mysql.connector.connect(host="mysql-server", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
@@ -499,7 +510,7 @@ def insertIngressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCal
     mysql_db.commit()
 
 def insertEgressThroughputIntoMySQL(myDict, db_name, switch, interval, firstCall):
-    mysql_db = mysql.connector.connect(host="0.0.0.0", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
+    mysql_db = mysql.connector.connect(host="mysql-server", user=MYSQL_USER, passwd=MYSQL_PASSWORD)
     mycursor = mysql_db.cursor()
     mycursor.execute("use " + db_name)
 
