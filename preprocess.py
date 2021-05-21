@@ -166,8 +166,11 @@ def main():
     data_source = Grafana_Datasource(name=DATABASE, database_type="mysql", database=DATABASE)
     json_body = "{ " + data_source.get_json_string() + " }"
     
-    resp = requests.request("POST", url=API_KEY_URL, headers={"Content-Type": "application/json"}, data = "{\"role\":\"Admin\",\"name\":\"preprocess_test_key_" + DATABASE + "\"}").json()
-    API_KEY = resp['key']
+    while True:
+        resp = requests.request("POST", url=API_KEY_URL, headers={"Content-Type": "application/json"}, data = "{\"role\":\"Admin\",\"name\":\"preprocess_test_key_" + DATABASE + "\"}").json()
+        if 'key' in resp:
+            API_KEY = resp['key']
+            break
 
     # HTTP headers used for communication with Grafana server
     headers = {

@@ -613,8 +613,12 @@ def generateScenarioData():
 if __name__ == "__main__":
 
     #Fetch the API key for communication with Grafana
-    result = requests.request("POST", url=API_KEY_URL, headers={"Content-Type": "application/json"}, data = "{\"role\":\"Admin\",\"name\":\"app_test_key_" + DATABASE + "\"}").json()
-    API_KEY = result['key']
+    
+    while True:
+        result = requests.request("POST", url=API_KEY_URL, headers={"Content-Type": "application/json"}, data = "{\"role\":\"Admin\",\"name\":\"app_test_key_" + DATABASE + "\"}").json()
+        if 'key' in result:
+            API_KEY = result['key']
+            break
 
     # HTTP headers used for communication with Grafana server
     headers = {
