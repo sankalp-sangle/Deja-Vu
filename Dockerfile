@@ -25,6 +25,10 @@ RUN yes | apt install python-pip
 
 RUN yes | apt install python3-pip
 
+RUN yes | pip install --upgrade setuptools
+
+RUN yes | pip3 install --upgrade setuptools
+
 RUN yes | pip install -r requirementsPython.txt
 
 RUN yes | pip3 install -r requirementsPython3.txt
