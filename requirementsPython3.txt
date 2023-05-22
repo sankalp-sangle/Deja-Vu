@@ -4,6 +4,6 @@ Flask-Moment==0.9.0
 Flask-WTF==0.14.3
 Jinja2==2.11.3
 mysql-connector-python==8.0.19
-requests==2.22.0
+requests==2.31.0
 WTForms==2.2.1
 
